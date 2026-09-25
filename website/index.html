@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codebase Trainer — High-Performance Local Codebase Intelligence & NLP Model</title>
+  <meta name="description" content="Supercharge Cursor, Claude Code, Antigravity, and VS Code with local AST facts, Okapi BM25 semantic search, and zero-token call graph execution flows. 99.98% token savings." />
+  
+  <!-- Developer Fonts: Geist, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- Preloader Screen -->
+  <div class="preloader" id="preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo">
+        <span class="logo-symbol">⚡</span>
+        <span class="logo-title">CODEBASE TRAINER</span>
+      </div>
+      <div class="preloader-subtitle">STARK CODEBASE INTELLIGENCE ENGINE</div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-number" id="progressNumber">0%</div>
+    </div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="navbar" id="navbar">
+    <div class="nav-wrapper">
+      <a href="#top" class="brand-logo">
+        <span class="brand-mark">CODEBASE</span>
+        <span class="brand-sub">TRAINER</span>
+      </a>
+
+      <nav class="nav-menu">
+        <a href="#about" class="nav-item">ARCHITECTURE</a>
+        <a href="#benchmark" class="nav-item">BENCHMARK</a>
+        <a href="#tools" class="nav-item">14 MCP TOOLS</a>
+        <a href="#flow" class="nav-item">SEQUENCE FLOW</a>
+        <a href="#setup" class="nav-item">CONFIGURATIONS</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank" class="btn-outline">
+          NPM REGISTRY
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section" id="top">
+    <div class="hero-ambient-glow"></div>
+
+    <div class="hero-container container">
+      <div class="hero-content">
+        <div class="pill-badge">
+          <span class="pill-dot"></span>
+          <span>LOCAL AST FACTS • OKAPI BM25 VECTOR SEARCH • MCP PROTOCOL</span>
+        </div>
+        <h1 class="hero-main-title">
+          Stop Grepping. <br />
+          <span class="white-text">Train Your Codebase For AI IDEs.</span>
+        </h1>
+        <p class="hero-tagline">
+          Supercharging Cursor, Claude Code, and Antigravity with local AST facts, Okapi BM25 semantic vector search, and dynamic call graphs. Reduce AI prompt tokens by <strong>99.98%</strong> and get <strong>26x faster</strong> context retrieval.
+        </p>
+
+        <div class="command-widget">
+          <div class="command-input">
+            <span class="command-prefix">$</span>
+            <span class="command-text" id="cmdText">npx codebase-trainer init</span>
+          </div>
+          <button class="btn-white" id="copyCmdBtn">
+            <span>COPY</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Floating 3D Map / Graph Action Trigger -->
+      <a href="#tools" class="floating-3d-button">
+        <div class="f-button-badge">3D GRAPH</div>
+        <div class="f-button-title">EXPLORE<br />14 MCP TOOLS</div>
+        <div class="f-button-icon">→</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Section 1: Architecture Split Cards -->
+  <section class="section-about" id="about">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">HIGH-PERFORMANCE ARCHITECTURE</span>
+        <h2 class="section-title">Zero-Cloud Local Intelligence Index</h2>
+        <p class="section-desc">Designed specifically for developer tools, IDE agents, and local workflows.</p>
+      </div>
+
+      <div class="split-grid">
+        <div class="split-card">
+          <div class="card-image-wrap">
+            <div class="card-img-placeholder img-1"></div>
+          </div>
+          <div class="card-caption">
+            <span class="caption-num">01</span>
+            <h4>Okapi BM25 Semantic Index</h4>
+            <p>Industry-standard term frequency & inverse document frequency ranking algorithm for instant symbol precision.</p>
+          </div>
+        </div>
+
+        <div class="split-card">
+          <div class="card-image-wrap">
+            <div class="card-img-placeholder img-2"></div>
+          </div>
+          <div class="card-caption">
+            <span class="caption-num">02</span>
+            <h4>Dynamic Execution Flows</h4>
+            <p>Traces multi-module function callers and callees to render real-time Mermaid sequence diagrams.</p>
+          </div>
+        </div>
+
+        <div class="split-card">
+          <div class="card-image-wrap">
+            <div class="card-img-placeholder img-3"></div>
+          </div>
+          <div class="card-caption">
+            <span class="caption-num">03</span>
+            <h4>100% Zero-Cloud Reliance</h4>
+            <p>Runs entirely inside your local node runtime. Zero data leakage, zero API subscription fees, zero latency.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Performance Benchmark -->
+  <section class="section-benchmark" id="benchmark">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">EMPIRICAL BENCHMARK</span>
+        <h2 class="section-title">100 Real-World Query Test Results</h2>
+        <p class="section-desc">Comparing raw file grepping vs. pre-indexed AST & BM25 local model retrieval.</p>
+      </div>
+
+      <div class="benchmark-grid">
+        <!-- Without Model -->
+        <div class="bench-card naive-bench">
+          <div class="bench-head">
+            <span class="bench-tag tag-raw">RAW FILE GREP</span>
+            <h3>Without Model Index</h3>
+          </div>
+          <div class="bench-metrics">
+            <div class="m-item">
+              <span class="m-label">Total Prompt Tokens:</span>
+              <span class="m-val val-bad">453,930,500</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Avg Tokens / Query:</span>
+              <span class="m-val val-bad">4,539,305</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Raw Matches Noise:</span>
+              <span class="m-val val-bad">43,996</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Context Overhead:</span>
+              <span class="m-val val-bad">Exceeds Limits</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Divider / Accent Pulse -->
+        <div class="bench-center-pulse">
+          <div class="pulse-val white-text">99.98%</div>
+          <div class="pulse-sub">TOKEN SAVINGS</div>
+          <div class="pulse-speed text-cyan">26x FASTER</div>
+        </div>
+
+        <!-- With Model -->
+        <div class="bench-card model-bench white-glow">
+          <div class="bench-head">
+            <span class="bench-tag tag-model">CODEBASE-TRAINER</span>
+            <h3>With Model Index</h3>
+          </div>
+          <div class="bench-metrics">
+            <div class="m-item">
+              <span class="m-label">Total Prompt Tokens:</span>
+              <span class="m-val val-good">86,080</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Avg Tokens / Query:</span>
+              <span class="m-val val-good">861 (~5,200x less)</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Symbol Precision:</span>
+              <span class="m-val val-good">300 Ranked Chunks</span>
+            </div>
+            <div class="m-item">
+              <span class="m-label">Local Latency:</span>
+              <span class="m-val val-good">~52 ms / query</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: 14 MCP Tools -->
+  <section class="section-tools" id="tools">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">MCP PROTOCOL SUITE</span>
+        <h2 class="section-title">14 Native MCP Server Tools</h2>
+        <p class="section-desc">Instantly accessible to Cursor, Claude Code, and Antigravity via Stdio JSON-RPC.</p>
+      </div>
+
+      <div class="tools-layout">
+        <div class="tools-sidebar">
+          <div class="tool-nav-item active" data-tool="get_codebase_conventions">
+            <span class="t-number">01</span>
+            <span class="t-title">get_codebase_conventions</span>
+          </div>
+          <div class="tool-nav-item" data-tool="trace_execution_flow">
+            <span class="t-number">02</span>
+            <span class="t-title">trace_execution_flow</span>
+          </div>
+          <div class="tool-nav-item" data-tool="search_codebase">
+            <span class="t-number">03</span>
+            <span class="t-title">search_codebase</span>
+          </div>
+          <div class="tool-nav-item" data-tool="search_global_workspace">
+            <span class="t-number">04</span>
+            <span class="t-title">search_global_workspace</span>
+          </div>
+          <div class="tool-nav-item" data-tool="get_change_impact_analysis">
+            <span class="t-number">05</span>
+            <span class="t-title">get_change_impact_analysis</span>
+          </div>
+          <div class="tool-nav-item" data-tool="scan_security_vulnerabilities">
+            <span class="t-number">06</span>
+            <span class="t-title">scan_security_vulnerabilities</span>
+          </div>
+          <div class="tool-nav-item" data-tool="analyze_codebase_quality">
+            <span class="t-number">07</span>
+            <span class="t-title">analyze_codebase_quality</span>
+          </div>
+          <div class="tool-nav-item" data-tool="get_agent_context_pack">
+            <span class="t-number">08</span>
+            <span class="t-title">get_agent_context_pack</span>
+          </div>
+        </div>
+
+        <div class="tool-detail-view">
+          <div class="detail-header">
+            <h3 id="activeToolName" class="detail-title">get_codebase_conventions</h3>
+            <span class="detail-badge" id="activeToolTag">MCP PROTOCOL TOOL</span>
+          </div>
+          <p id="activeToolDesc" class="detail-desc">
+            Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.
+          </p>
+
+          <div class="code-window">
+            <div class="code-window-header">
+              <span>RESPONSE SCHEMA</span>
+              <span>JSON</span>
+            </div>
+            <pre><code id="activeToolJson">{
+  "codebaseName": "codebase-trainer",
+  "rules": {
+    "structural": {
+      "constantsPlacement": "top",
+      "exportStyle": "named",
+      "typeAnnotationRequirement": true
+    },
+    "git": {
+      "commitFormat": "Conventional Commits (feat, fix, docs)",
+      "branchNaming": "feature/*, fix/*"
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Dynamic Execution Flow Demo -->
+  <section class="section-flow" id="flow">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">DYNAMIC CALL GRAPH TRACING</span>
+        <h2 class="section-title">Mermaid Sequence Diagram Generator</h2>
+        <p class="section-desc">Real-time dynamic execution flow tracing without hardcoded sequence lines.</p>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-controls">
+          <label class="flow-label">FEATURE QUERY:</label>
+          <input type="text" id="flowQuery" value="E2EE encryption flow" class="dark-input" />
+          <button class="btn-white" id="runFlowBtn">TRACE FLOW</button>
+        </div>
+
+        <div class="flow-split">
+          <div class="flow-steps">
+            <h4>EXECUTION STEPS</h4>
+            <div class="step-card">
+              <span class="s-num">01</span>
+              <div>
+                <strong>Phase 1: Entrypoint (server.ts:L25-L35)</strong>
+                <p>Initiates feature query & resolves workspace repo path.</p>
+              </div>
+            </div>
+            <div class="step-card">
+              <span class="s-num">02</span>
+              <div>
+                <strong>Phase 2: Key derivation (keys.ts:L12-L28)</strong>
+                <p>Executes HKDF-SHA256 key exchange algorithm.</p>
+              </div>
+            </div>
+            <div class="step-card">
+              <span class="s-num">03</span>
+              <div>
+                <strong>Phase 3: AES-256-GCM cipher (cipher.ts:L40-L65)</strong>
+                <p>Encrypts payload with CSPRNG nonce & auth tag.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-mermaid-code">
+            <div class="code-window-header">MERMAID SEQUENCE SPEC</div>
+            <pre><code>sequenceDiagram
+  autonumber
+  actor User as User / Client
+  participant server_ts as server.ts
+  participant keys_ts as keys.ts
+  participant cipher_ts as cipher.ts
+
+  User->>server_ts: 1. Initiate query "E2EE encryption flow"
+  server_ts->>keys_ts: 2. Call execution target (keys.ts)
+  keys_ts->>cipher_ts: 3. Call execution target (cipher.ts)
+  cipher_ts-->>User: Complete execution flow result</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: IDE Configuration Generator -->
+  <section class="section-setup" id="setup">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">IDE INTEGRATION</span>
+        <h2 class="section-title">One-Click Config Generator</h2>
+        <p class="section-desc">Select your preferred AI editor to copy ready-to-use MCP configuration settings.</p>
+      </div>
+
+      <div class="ide-container">
+        <div class="ide-tabs">
+          <button class="ide-tab active" data-ide="cursor">CURSOR IDE</button>
+          <button class="ide-tab" data-ide="antigravity">ANTIGRAVITY IDE</button>
+          <button class="ide-tab" data-ide="claude">CLAUDE CODE / DESKTOP</button>
+          <button class="ide-tab" data-ide="vscode">VS CODE</button>
+        </div>
+
+        <div class="ide-config-body">
+          <div class="config-meta">
+            <span id="configPath">Cursor IDE -> Settings -> Features -> MCP -> Add New MCP Server</span>
+            <button class="btn-white" id="copyConfigBtn">COPY JSON</button>
+          </div>
+          <div class="code-window">
+            <pre><code id="configJsonDisplay">{
+  "mcpServers": {
+    "codebase-trainer": {
+      "command": "npx",
+      "args": ["-y", "codebase-trainer", "mcp"]
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer Section -->
+  <footer class="footer">
+    <div class="container footer-wrapper">
+      <div class="footer-left">
+        <span class="brand-mark">CODEBASE</span>
+        <span class="brand-sub">TRAINER</span>
+        <p class="copyright">© 2026 Codebase Trainer. Released under MIT License.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#about">ARCHITECTURE</a>
+        <a href="#benchmark">BENCHMARK</a>
+        <a href="#tools">14 MCP TOOLS</a>
+        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank">NPM PACKAGE</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
