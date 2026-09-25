@@ -1,0 +1,45 @@
+{
+  "name": "codebase-trainer",
+  "version": "1.0.0",
+  "description": "Fast, local per-codebase intelligence index and NLP model generator for AI IDEs & agents",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "cb-trainer": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli/index.js mcp",
+    "test": "npx tsx tests/unit.test.ts",
+    "security": "node dist/cli/index.js security",
+    "audit": "node dist/cli/index.js audit",
+    "ci": "node dist/cli/index.js ci",
+    "watch": "node dist/cli/index.js watch",
+    "website:dev": "npm --prefix website run dev",
+    "website:build": "npm --prefix website run build",
+    "docker:build": "docker build -t codebase-trainer:latest .",
+    "docker:run": "docker run -i codebase-trainer:latest mcp"
+  },
+  "keywords": [
+    "mcp",
+    "codebase-index",
+    "ai-agent",
+    "context-pack",
+    "bm25-search",
+    "ast-facts",
+    "call-graph"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "commander": "^15.0.0",
+    "js-yaml": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
