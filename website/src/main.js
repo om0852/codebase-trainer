@@ -195,7 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const activeToolJson = document.getElementById('activeToolJson');
 
   toolItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentScrollY = window.scrollY;
+
       toolItems.forEach(i => i.classList.remove('active'));
       item.classList.add('active');
 
@@ -207,6 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
         activeToolDesc.textContent = data.desc;
         activeToolJson.textContent = data.json;
       }
+
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
     });
   });
 
@@ -217,7 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyConfigBtn = document.getElementById('copyConfigBtn');
 
   ideTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentScrollY = window.scrollY;
+
       ideTabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
@@ -227,11 +235,14 @@ document.addEventListener('DOMContentLoaded', () => {
         configPath.textContent = cfg.path;
         configJsonDisplay.textContent = cfg.json;
       }
+
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
     });
   });
 
   if (copyConfigBtn && configJsonDisplay) {
-    copyConfigBtn.addEventListener('click', () => {
+    copyConfigBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       navigator.clipboard.writeText(configJsonDisplay.textContent);
       copyConfigBtn.textContent = 'COPIED!';
       setTimeout(() => copyConfigBtn.textContent = 'COPY JSON', 2000);
@@ -243,7 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const docsPanes = document.querySelectorAll('.docs-pane');
 
   docsTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentScrollY = window.scrollY;
+
       docsTabs.forEach(t => t.classList.remove('active'));
       docsPanes.forEach(p => p.classList.remove('active'));
 
@@ -253,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (targetPane) {
         targetPane.classList.add('active');
       }
+
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
     });
   });
 });
