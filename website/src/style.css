@@ -735,6 +735,340 @@ pre {
 }
 
 /* Footer */
+/* Footer */
+/* Documentation Hub Section */
+.section-docs {
+  padding: 6rem 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+}
+
+.docs-hub-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.docs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  position: sticky;
+  top: 90px;
+}
+
+.docs-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.docs-nav-tab:hover {
+  background: var(--bg-card-hover);
+  color: #ffffff;
+}
+
+.docs-nav-tab.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-bright);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 #ffffff;
+}
+
+.doc-icon {
+  font-size: 1rem;
+}
+
+.docs-content-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2.5rem;
+  min-height: 520px;
+}
+
+.docs-pane {
+  display: none;
+}
+
+.docs-pane.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pane-header h3 {
+  font-family: var(--font-geist);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.badge-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  padding: 0.25rem 0.6rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-bright);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+}
+
+.pane-intro {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+/* Prereq Cards */
+.req-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.req-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.req-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.req-card h4 {
+  font-family: var(--font-geist);
+  font-size: 1.1rem;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.req-version {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  margin-bottom: 0.75rem;
+}
+
+.req-card p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Install Blocks */
+.install-block {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.install-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.ib-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ib-num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.ib-header h4 {
+  font-family: var(--font-geist);
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.ib-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border-color);
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+}
+
+.install-block p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+/* IDE Setup Guide */
+.ide-guide-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+}
+
+.ide-guide-card h4 {
+  font-family: var(--font-geist);
+  font-size: 1.2rem;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+.setup-steps-list {
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.setup-steps-list li {
+  margin-bottom: 0.5rem;
+}
+
+/* CLI Commands Table */
+.cli-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.cli-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.cli-table th {
+  background: #000000;
+  padding: 0.85rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cli-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.cli-table tr:hover td {
+  background: var(--bg-card-hover);
+  color: #ffffff;
+}
+
+.cli-table code {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  background: rgba(0, 242, 255, 0.05);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Prompt Guides */
+.prompt-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.pg-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.pg-title {
+  font-family: var(--font-geist);
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+}
+
+.pg-prompt {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #ffffff;
+  background: #000000;
+  border-left: 3px solid var(--border-bright);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.pg-card p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* FAQ List */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.faq-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.faq-item h4 {
+  font-family: var(--font-geist);
+  font-size: 1.05rem;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.faq-item p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .footer {
   background: #000000;
   border-top: 1px solid var(--border-color);
@@ -767,6 +1101,8 @@ pre {
 
 @media (max-width: 900px) {
   .hero-main-title { font-size: 2.75rem; }
-  .split-grid, .benchmark-grid, .tools-layout, .flow-split { grid-template-columns: 1fr; }
+  .split-grid, .benchmark-grid, .tools-layout, .flow-split, .docs-hub-layout, .req-grid, .prompt-guide-grid { grid-template-columns: 1fr; }
   .floating-3d-button { display: none; }
+  .docs-sidebar { position: static; }
 }
+

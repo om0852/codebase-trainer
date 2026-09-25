@@ -42,6 +42,7 @@
         <a href="#benchmark" class="nav-item">BENCHMARK</a>
         <a href="#tools" class="nav-item">14 MCP TOOLS</a>
         <a href="#flow" class="nav-item">SEQUENCE FLOW</a>
+        <a href="#docs" class="nav-item">DOCUMENTATION</a>
         <a href="#setup" class="nav-item">CONFIGURATIONS</a>
       </nav>
 
@@ -344,6 +345,398 @@
   keys_ts->>cipher_ts: 3. Call execution target (cipher.ts)
   cipher_ts-->>User: Complete execution flow result</code></pre>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Full Documentation Hub -->
+  <section class="section-docs" id="docs">
+    <div class="container">
+      <div class="section-header text-center">
+        <span class="section-tag">COMPLETE MANUAL & SPECIFICATION</span>
+        <h2 class="section-title">Documentation & Setup Hub</h2>
+        <p class="section-desc">Detailed requirements, installation methods, CLI commands, and step-by-step setup guides for AI developers.</p>
+      </div>
+
+      <div class="docs-hub-layout">
+        <!-- Docs Tab Sidebar -->
+        <div class="docs-sidebar">
+          <button class="docs-nav-tab active" data-docstab="prereqs">
+            <span class="doc-icon">📋</span>
+            <span>Prerequisites</span>
+          </button>
+          <button class="docs-nav-tab" data-docstab="install">
+            <span class="doc-icon">🚀</span>
+            <span>Installation</span>
+          </button>
+          <button class="docs-nav-tab" data-docstab="idesetup">
+            <span class="doc-icon">⚙️</span>
+            <span>IDE Integration</span>
+          </button>
+          <button class="docs-nav-tab" data-docstab="cliref">
+            <span class="doc-icon">💻</span>
+            <span>CLI Commands</span>
+          </button>
+          <button class="docs-nav-tab" data-docstab="usage">
+            <span class="doc-icon">💡</span>
+            <span>How to Use / Prompts</span>
+          </button>
+          <button class="docs-nav-tab" data-docstab="faq">
+            <span class="doc-icon">🛠️</span>
+            <span>FAQ & Troubleshooting</span>
+          </button>
+        </div>
+
+        <!-- Docs Main Content Panel -->
+        <div class="docs-content-panel">
+          
+          <!-- Pane 1: Prerequisites -->
+          <div class="docs-pane active" id="pane-prereqs">
+            <div class="pane-header">
+              <h3>Prerequisites & System Requirements</h3>
+              <span class="badge-tag">ENVIRONMENT REQUIREMENTS</span>
+            </div>
+            <p class="pane-intro">
+              Codebase Trainer is engineered to operate 100% locally on your machine without external cloud dependencies, API subscriptions, or telemetry tracking. Ensure your development environment meets the following specifications:
+            </p>
+
+            <div class="req-grid">
+              <div class="req-card">
+                <div class="req-icon">⚡</div>
+                <h4>Node.js Runtime</h4>
+                <div class="req-version">Node.js 18.0.0+ (LTS Recommended)</div>
+                <p>Built with ES Modules (<code>"type": "module"</code>). Supports Node.js 18.x, 20.x, and 22.x LTS releases. V8 engine optimizations are utilized for fast BM25 token vectorization.</p>
+              </div>
+
+              <div class="req-card">
+                <div class="req-icon">📦</div>
+                <h4>Package Manager</h4>
+                <div class="req-version">npm v8.0+, pnpm v7+, or Yarn v1.22+</div>
+                <p>Supports zero-install execution via <code>npx codebase-trainer</code>, global binary registration via <code>npm i -g</code>, or fast pnpm workspaces.</p>
+              </div>
+
+              <div class="req-card">
+                <div class="req-icon">💻</div>
+                <h4>Operating System</h4>
+                <div class="req-version">macOS, Linux & Windows (WSL2/CMD)</div>
+                <p>Full cross-platform support for macOS (Apple Silicon M1/M2/M3 & Intel), Linux distributions (Ubuntu, Debian, Fedora, Arch), and Windows 10/11 (PowerShell, Command Prompt, and WSL2).</p>
+              </div>
+
+              <div class="req-card">
+                <div class="req-icon">🐙</div>
+                <h4>Version Control</h4>
+                <div class="req-version">Git 2.20.0+</div>
+                <p>Utilized by the Git Miner engine to extract commit conventions, git blame metadata, change impact paths, and PR review summaries automatically.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 2: Installation Options -->
+          <div class="docs-pane" id="pane-install">
+            <div class="pane-header">
+              <h3>Installation Methods</h3>
+              <span class="badge-tag">4 DEPLOYMENT MODES</span>
+            </div>
+            <p class="pane-intro">
+              Choose the installation strategy that best fits your workflow. Zero-installation via <code>npx</code> is recommended for instantaneous setup.
+            </p>
+
+            <div class="install-block">
+              <div class="ib-header">
+                <span class="ib-num">METHOD 01</span>
+                <h4>Zero-Installation Execution (Recommended)</h4>
+                <span class="ib-tag text-green">FASTEST</span>
+              </div>
+              <p>Run instantly in any repository without globally modifying your Node.js environment:</p>
+              <div class="code-window">
+                <div class="code-window-header">TERMINAL</div>
+                <pre><code># Initialize and index current repository
+npx codebase-trainer init
+
+# Start real-time background watcher on code edits
+npx codebase-trainer watch</code></pre>
+              </div>
+            </div>
+
+            <div class="install-block">
+              <div class="ib-header">
+                <span class="ib-num">METHOD 02</span>
+                <h4>Global NPM Package Installation</h4>
+                <span class="ib-tag">CLI BINARY</span>
+              </div>
+              <p>Install the <code>cb-trainer</code> executable globally across your system:</p>
+              <div class="code-window">
+                <div class="code-window-header">TERMINAL</div>
+                <pre><code># Install globally via npm
+npm install -g codebase-trainer
+
+# Verify global CLI installation
+cb-trainer --help
+
+# Run CLI commands directly
+cb-trainer status</code></pre>
+              </div>
+            </div>
+
+            <div class="install-block">
+              <div class="ib-header">
+                <span class="ib-num">METHOD 03</span>
+                <h4>Docker Containerized Deployment</h4>
+                <span class="ib-tag">ISOLATED CONTAINER</span>
+              </div>
+              <p>Run Codebase Trainer inside an isolated Docker container with mounted local volumes:</p>
+              <div class="code-window">
+                <div class="code-window-header">TERMINAL</div>
+                <pre><code># Build local Docker image
+docker build -t codebase-trainer:latest .
+
+# Run MCP server inside container linked to your project
+docker run -i --rm -v "$(pwd):/workspace" codebase-trainer:latest mcp</code></pre>
+              </div>
+            </div>
+
+            <div class="install-block">
+              <div class="ib-header">
+                <span class="ib-num">METHOD 04</span>
+                <h4>Build from GitHub Source</h4>
+                <span class="ib-tag">DEVELOPER BUILD</span>
+              </div>
+              <p>Clone the open-source repository, install dependencies, and build locally:</p>
+              <div class="code-window">
+                <div class="code-window-header">TERMINAL</div>
+                <pre><code>git clone https://github.com/om0852/codebase-trainer.git
+cd codebase-trainer
+npm install
+npm run build
+npm link</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 3: IDE Integration Setup -->
+          <div class="docs-pane" id="pane-idesetup">
+            <div class="pane-header">
+              <h3>IDE Integration & MCP Setup</h3>
+              <span class="badge-tag">STEP-BY-STEP CONFIG</span>
+            </div>
+            <p class="pane-intro">
+              Connect Codebase Trainer directly to your favorite AI-powered code editor via the Model Context Protocol (MCP).
+            </p>
+
+            <div class="ide-guide-card">
+              <h4>Cursor IDE Integration</h4>
+              <ol class="setup-steps-list">
+                <li>Open <strong>Cursor IDE</strong> and navigate to <code>Settings</code> → <code>Features</code> → <code>MCP</code>.</li>
+                <li>Click <strong>+ Add New MCP Server</strong>.</li>
+                <li>Set <strong>Name</strong> to <code>codebase-trainer</code> and <strong>Type</strong> to <code>command</code>.</li>
+                <li>In the <strong>Command</strong> field, enter: <code>npx -y codebase-trainer mcp</code>.</li>
+                <li>Or edit <code>.cursor/mcp.json</code> directly in your workspace:</li>
+              </ol>
+              <div class="code-window">
+                <div class="code-window-header">.cursor/mcp.json</div>
+                <pre><code>{
+  "mcpServers": {
+    "codebase-trainer": {
+      "command": "npx",
+      "args": ["-y", "codebase-trainer", "mcp"]
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>Antigravity IDE Integration</h4>
+              <ol class="setup-steps-list">
+                <li>Locate your global Antigravity config file at <code>%USERPROFILE%\.gemini\config\mcp_config.json</code> (Windows) or <code>~/.gemini/config/mcp_config.json</code> (macOS/Linux).</li>
+                <li>Add the <code>codebase-trainer</code> entry under <code>mcpServers</code>:</li>
+              </ol>
+              <div class="code-window">
+                <div class="code-window-header">mcp_config.json</div>
+                <pre><code>{
+  "mcpServers": {
+    "codebase-trainer": {
+      "$typeName": "exa.cascade_plugins_pb.CascadePluginCommandTemplate",
+      "command": "npx",
+      "args": ["-y", "codebase-trainer", "mcp"],
+      "env": {}
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>Claude Code CLI & Claude Desktop Integration</h4>
+              <ol class="setup-steps-list">
+                <li>For <strong>Claude Code CLI</strong>, run: <code>claude mcp add codebase-trainer -- npx -y codebase-trainer mcp</code>.</li>
+                <li>For <strong>Claude Desktop</strong>, open <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows) or <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) and paste:</li>
+              </ol>
+              <div class="code-window">
+                <div class="code-window-header">claude_desktop_config.json</div>
+                <pre><code>{
+  "mcpServers": {
+    "codebase-trainer": {
+      "command": "npx",
+      "args": ["-y", "codebase-trainer", "mcp"]
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 4: CLI Commands Reference -->
+          <div class="docs-pane" id="pane-cliref">
+            <div class="pane-header">
+              <h3>CLI Command Reference</h3>
+              <span class="badge-tag">FULL SUBCOMMAND SUITE</span>
+            </div>
+            <p class="pane-intro">
+              Codebase Trainer provides a comprehensive suite of 10 CLI subcommands for building, querying, scanning, and monitoring local codebase intelligence.
+            </p>
+
+            <div class="cli-table-wrap">
+              <table class="cli-table">
+                <thead>
+                  <tr>
+                    <th>Command</th>
+                    <th>Description</th>
+                    <th>Example Usage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>codebase-trainer init</code></td>
+                    <td>Indexes current repository AST facts, imports, export symbols, conventions, and Okapi BM25 index into <code>.codebase/</code>.</td>
+                    <td><code>npx codebase-trainer init</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer watch</code></td>
+                    <td>Launches active background file watcher that incrementally re-indexes AST facts instantly whenever files are modified.</td>
+                    <td><code>npx codebase-trainer watch</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer mcp</code></td>
+                    <td>Starts Stdio MCP Server to handle JSON-RPC requests from AI IDE agents (Cursor, Antigravity, Claude Code).</td>
+                    <td><code>npx codebase-trainer mcp</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer flow &lt;query&gt;</code></td>
+                    <td>Traces dynamic execution call graphs across modules and outputs interactive Mermaid sequence diagrams.</td>
+                    <td><code>npx codebase-trainer flow "auth validation"</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer security</code></td>
+                    <td>Scans indexed AST nodes for hardcoded API keys, JWT secrets, unsafe `eval()`, and SQL injection vulnerabilities.</td>
+                    <td><code>npx codebase-trainer security</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer impact &lt;file&gt;</code></td>
+                    <td>Analyzes git diffs and AST callers to calculate downstream change impact and breaking risk scores before committing code.</td>
+                    <td><code>npx codebase-trainer impact src/mcp/server.ts</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer routes</code></td>
+                    <td>Extracts all REST API endpoints, HTTP methods, and parameter schemas into an OpenAPI microservice registry.</td>
+                    <td><code>npx codebase-trainer routes</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer status</code></td>
+                    <td>Displays index database health, total indexed files, symbol count, BM25 term vocabulary size, and disk space usage.</td>
+                    <td><code>npx codebase-trainer status</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer audit</code></td>
+                    <td>Evaluates code quality, detects synchronous I/O on hot paths, circular imports, high cyclomatic complexity, and tech debt.</td>
+                    <td><code>npx codebase-trainer audit</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>codebase-trainer ci</code></td>
+                    <td>Exports SARIF security static audit logs for native integration with GitHub Security / Code Scanning CI/CD pipelines.</td>
+                    <td><code>npx codebase-trainer ci</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pane 5: How to Use & Workflow -->
+          <div class="docs-pane" id="pane-usage">
+            <div class="pane-header">
+              <h3>How to Use & Prompting Guide</h3>
+              <span class="badge-tag">AI AGENT WORKFLOWS</span>
+            </div>
+            <p class="pane-intro">
+              Once configured, your AI assistant automatically gains access to all 14 Codebase Trainer MCP tools. Here are real-world prompting patterns to get maximum accuracy:
+            </p>
+
+            <div class="prompt-guide-grid">
+              <div class="pg-card">
+                <div class="pg-title">🔍 Architecture & Feature Discovery</div>
+                <div class="pg-prompt">
+                  "Use <code>@codebase-trainer trace_execution_flow</code> to explain how our user registration and JWT issue flow operates step by step."
+                </div>
+                <p>The AI agent invokes `trace_execution_flow`, retrieves exact AST call graphs, and presents a visual Mermaid sequence diagram.</p>
+              </div>
+
+              <div class="pg-card">
+                <div class="pg-title">⚠️ Safe Refactoring & Impact Checking</div>
+                <div class="pg-prompt">
+                  "Before I refactor <code>src/mcp/server.ts</code>, use <code>@codebase-trainer get_change_impact_analysis</code> to check which CLI handlers and routes could break."
+                </div>
+                <p>Prevents unintended regression bugs by checking caller dependency graphs before editing a single line of code.</p>
+              </div>
+
+              <div class="pg-card">
+                <div class="pg-title">🔒 Pre-Commit Security Audit</div>
+                <div class="pg-prompt">
+                  "Run <code>@codebase-trainer scan_security_vulnerabilities</code> on my current branch and verify no raw secrets or unhandled exceptions exist."
+                </div>
+                <p>Instantly verifies security posture locally before pushing PRs to production.</p>
+              </div>
+
+              <div class="pg-card">
+                <div class="pg-title">🚀 Onboarding & Convention Alignment</div>
+                <div class="pg-prompt">
+                  "Fetch our repository standards using <code>@codebase-trainer get_codebase_conventions</code> and ensure my new module adheres to exported naming conventions."
+                </div>
+                <p>Enforces strict team conventions automatically without relying on manual code review feedback loops.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 6: Troubleshooting & FAQ -->
+          <div class="docs-pane" id="pane-faq">
+            <div class="pane-header">
+              <h3>Frequently Asked Questions & Troubleshooting</h3>
+              <span class="badge-tag">SOLUTIONS & FAQ</span>
+            </div>
+
+            <div class="faq-list">
+              <div class="faq-item">
+                <h4>Q: Do I need to pay for any cloud subscription or API tokens?</h4>
+                <p>No! Codebase Trainer runs 100% locally on your Node.js runtime. There are zero API keys required, zero third-party cloud servers involved, and zero subscription costs.</p>
+              </div>
+
+              <div class="faq-item">
+                <h4>Q: How does Codebase Trainer save 99.98% of AI prompt tokens?</h4>
+                <p>Instead of feeding thousands of raw files into your LLM prompt window (which wastes millions of tokens and causes context overflow), Codebase Trainer feeds precise AST facts, Okapi BM25 ranked chunks, and call graphs directly to the agent. This reduces prompt token usage from ~450 million tokens down to ~86,000 tokens for 100 queries!</p>
+              </div>
+
+              <div class="faq-item">
+                <h4>Q: What should I do if my IDE says "MCP Server connection failed"?</h4>
+                <p>Verify that Node.js 18.0.0+ is installed and accessible in your system's <code>PATH</code>. If running <code>npx -y codebase-trainer mcp</code> fails, try running <code>npm i -g codebase-trainer</code> globally first, then set the command in your IDE to <code>cb-trainer</code> with args <code>["mcp"]</code>.</p>
+              </div>
+
+              <div class="faq-item">
+                <h4>Q: Where is the codebase index stored?</h4>
+                <p>The codebase index is stored locally inside your project directory at <code>.codebase/</code> (<code>index.db.json</code>, <code>conventions.yaml</code>, <code>results.sarif</code>). You can add <code>.codebase/*.db.json</code> to your <code>.gitignore</code> if desired.</p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

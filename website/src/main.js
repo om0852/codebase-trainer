@@ -237,4 +237,23 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => copyConfigBtn.textContent = 'COPY JSON', 2000);
     });
   }
+
+  // Documentation Hub Tab Switcher
+  const docsTabs = document.querySelectorAll('.docs-nav-tab');
+  const docsPanes = document.querySelectorAll('.docs-pane');
+
+  docsTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      docsTabs.forEach(t => t.classList.remove('active'));
+      docsPanes.forEach(p => p.classList.remove('active'));
+
+      tab.classList.add('active');
+      const targetTab = tab.getAttribute('data-docstab');
+      const targetPane = document.getElementById(`pane-${targetTab}`);
+      if (targetPane) {
+        targetPane.classList.add('active');
+      }
+    });
+  });
 });
+
