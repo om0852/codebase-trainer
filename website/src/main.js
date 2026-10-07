@@ -155,24 +155,9 @@ const ideConfigs = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Preloader Countdown Animation
+  // Preloader Complete Instantly
   const preloader = document.getElementById('preloader');
-  const progressBar = document.getElementById('progressBar');
-  const progressNumber = document.getElementById('progressNumber');
-
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 15) + 5;
-    if (progress >= 100) {
-      progress = 100;
-      clearInterval(interval);
-      setTimeout(() => {
-        if (preloader) preloader.classList.add('fade-out');
-      }, 300);
-    }
-    if (progressBar) progressBar.style.width = `${progress}%`;
-    if (progressNumber) progressNumber.textContent = `${progress}%`;
-  }, 40);
+  if (preloader) preloader.style.display = 'none';
 
   // Copy Hero Command
   const copyCmdBtn = document.getElementById('copyCmdBtn');

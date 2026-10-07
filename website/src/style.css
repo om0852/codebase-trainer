@@ -54,8 +54,17 @@ a {
   padding: 0 1.5rem;
 }
 
+@keyframes textShine {
+  to { background-position: 200% center; }
+}
+
 .white-text {
-  color: #ffffff;
+  background: linear-gradient(110deg, #ffffff 30%, rgba(255, 255, 255, 0.3) 40%, #ffffff 50%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textShine 4s linear infinite;
 }
 
 .text-cyan { color: var(--accent-cyan); }
@@ -212,6 +221,12 @@ a {
   color: #ffffff;
 }
 
+@keyframes buttonReflect {
+  0% { left: -100%; }
+  15% { left: 100%; }
+  100% { left: 100%; }
+}
+
 .btn-white {
   display: inline-flex;
   align-items: center;
@@ -226,6 +241,20 @@ a {
   letter-spacing: 0.05em;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-white::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.15), transparent);
+  transform: skewX(-20deg);
+  animation: buttonReflect 5s infinite;
 }
 
 .btn-white:hover {
@@ -263,16 +292,23 @@ a {
   background: var(--bg-dark);
 }
 
+@keyframes pulseGlow {
+  0% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+  50% { transform: translateX(-50%) scale(1.15); opacity: 1; filter: blur(90px); }
+  100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+}
+
 .hero-ambient-glow {
   position: absolute;
-  top: 15%;
+  top: 10%;
   left: 50%;
   transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  width: 700px;
+  height: 400px;
+  background: radial-gradient(ellipse at top, rgba(0, 242, 255, 0.15) 0%, rgba(16, 185, 129, 0.05) 40%, transparent 70%);
   filter: blur(80px);
   pointer-events: none;
+  animation: pulseGlow 6s infinite ease-in-out;
 }
 
 .hero-content {
