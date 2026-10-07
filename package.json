@@ -1,6 +1,6 @@
 {
   "name": "codebase-trainer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fast, local per-codebase intelligence index and NLP model generator for AI IDEs & agents",
   "main": "dist/cli/index.js",
   "bin": {
