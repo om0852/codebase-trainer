@@ -1,3 +1,5 @@
+import { initCrosshair } from './crosshair.js';
+
 // Tool Data Dictionary
 const mcpToolsData = {
   get_codebase_conventions: {
@@ -101,6 +103,16 @@ const mcpToolsData = {
   "topSnippets": ["src/mcp/server.ts#L195-L235"],
   "impactWarnings": ["Modifying server.ts affects 4 CLI handlers"]
 }`
+  },
+  detect_api_drift: {
+    tag: "CONTRACT DRIFT ENGINE",
+    desc: "Scan client fetch calls against backend route handlers, flagging payload mismatches, missing fields, and dead routes.",
+    json: `{
+  "scannedClientCalls": 18,
+  "scannedServerEndpoints": 24,
+  "healthStatus": "HEALTHY",
+  "issues": []
+}`
   }
 };
 
@@ -155,6 +167,23 @@ const ideConfigs = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize React Bits Crosshair cursor animation
+  initCrosshair({
+    color: '#00f2ff',
+    thickness: 1,
+    opacity: 0.85,
+    lineStyle: 'solid',
+    gap: 4,
+    fade: 0.15,
+    smoothing: 0.35,
+    showCoordinates: true,
+    targetEffect: 'lock',
+    targetSelector: 'a, button, [data-crosshair-target], .btn-outline, .btn-primary, .nav-item, .ide-tab, .docs-nav-tab, .tool-nav-item, .code-snippet, .stat-card, .metric-pill, .interactive-card, .brand-logo',
+    clickPulse: true,
+    hideCursor: false,
+    blendMode: 'normal'
+  });
+
   // Preloader Complete Instantly
   const preloader = document.getElementById('preloader');
   if (preloader) preloader.style.display = 'none';

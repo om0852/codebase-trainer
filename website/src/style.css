@@ -1142,3 +1142,19 @@ pre {
   .docs-sidebar { position: static; }
 }
 
+/* React Bits Crosshair Cursor Animation Styles */
+.crosshair-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999;
+}
+
+.crosshair-cursor-hidden,
+.crosshair-cursor-hidden * {
+  cursor: none !important;
+}
+
+
