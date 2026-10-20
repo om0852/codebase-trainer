@@ -48,11 +48,12 @@ export class GitMiner {
         ? `Conventional Commits (${Array.from(commitTypes).join(', ')})`
         : 'Freeform commit messages';
 
-      // Get uncommitted changed files
+      // Get uncommitted changed files (XY <filename>)
       const statusOutput = execSync('git status --porcelain', { cwd: repoPath, encoding: 'utf8' });
       const uncommittedModifiedFiles = statusOutput
-        .split('\n')
-        .map(line => line.trim().slice(3))
+        .split(/\r?\n/)
+        .filter(line => line.length > 3)
+        .map(line => line.slice(3).trim())
         .filter(Boolean);
 
       return {

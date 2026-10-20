@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTFact } from '../types/index.js';
+import { SecretSanitizer } from '../security/secretSanitizer.js';
 
 export class ASTExtractor {
   public static extractFileFacts(filePath: string): ASTFact | null {
@@ -37,6 +38,10 @@ export class ASTExtractor {
       language = 'java';
     } else if (['.c', '.cpp', '.cc', '.h', '.hpp'].includes(ext)) {
       language = 'cpp';
+    } else if (ext === '.sql') {
+      language = 'sql';
+    } else if (ext === '.php') {
+      language = 'php';
     } else if (['.md', '.markdown', '.json'].includes(ext)) {
       language = ext.replace('.', '');
     } else {
@@ -115,10 +120,61 @@ export class ASTExtractor {
     });
 
     const avgFuncLength = funcCount > 0 ? Math.round(lines.length / funcCount) : lines.length;
-
-    // Type casting
     const typeCastingCount = (content.match(/as\s+[A-Z]\w*/g) || []).length;
     const hasTypeAnnotations = ['typescript', 'go', 'rust', 'java', 'cpp'].includes(language) || /:\s*(string|number|boolean|any)/.test(content);
+
+    // Extract declared symbols (functions, classes, interfaces, types)
+    const symbols = new Set<string>();
+    const symbolMatches = content.matchAll(/(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z0-9_]+)/g);
+    for (const m of symbolMatches) {
+      if (m[1]) symbols.add(m[1]);
+    }
+
+    // Also match const/let function definitions
+    const arrowMatches = content.matchAll(/(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/g);
+    for (const m of arrowMatches) {
+      if (m[1]) symbols.add(m[1]);
+    }
+
+    // Python def/class/async def
+    if (language === 'python') {
+      const pyMatches = content.matchAll(/^(?:\s*)?(?:async\s+)?(?:def|class)\s+([A-Za-z0-9_]+)/gm);
+      for (const m of pyMatches) {
+        if (m[1]) symbols.add(m[1]);
+      }
+    }
+
+    // Go func, struct, interface
+    if (language === 'go') {
+      const goMatches = content.matchAll(/(?:func\s+(?:\([^)]+\)\s+)?|type\s+)([A-Za-z0-9_]+)\s*(?:struct|interface|\()/g);
+      for (const m of goMatches) {
+        if (m[1]) symbols.add(m[1]);
+      }
+    }
+
+    // Rust fn, struct, enum, trait
+    if (language === 'rust') {
+      const rustMatches = content.matchAll(/(?:pub\s+)?(?:fn|struct|enum|trait|type|impl)\s+([A-Za-z0-9_]+)/g);
+      for (const m of rustMatches) {
+        if (m[1]) symbols.add(m[1]);
+      }
+    }
+
+    // Java / C++ class, interface, method
+    if (['java', 'cpp'].includes(language)) {
+      const javaMatches = content.matchAll(/(?:class|interface|struct)\s+([A-Za-z0-9_]+)/g);
+      for (const m of javaMatches) {
+        if (m[1]) symbols.add(m[1]);
+      }
+    }
+
+    // SQL tables and views
+    if (ext === '.sql') {
+      const sqlMatches = content.matchAll(/CREATE\s+(?:TABLE|VIEW|PROCEDURE|FUNCTION)\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z0-9_]+)/gi);
+      for (const m of sqlMatches) {
+        if (m[1]) symbols.add(m[1]);
+      }
+    }
 
     return {
       filePath,
@@ -129,7 +185,8 @@ export class ASTExtractor {
       typeCastingCount,
       importedModules,
       funcCount,
-      avgFuncLength
+      avgFuncLength,
+      symbols: Array.from(symbols)
     };
   }
 
@@ -155,6 +212,10 @@ export class ASTExtractor {
             walk(fullPath);
           }
         } else if (entry.isFile()) {
+          // Check secret / ignore patterns
+          if (SecretSanitizer.isIgnoredFile(fullPath, dirPath)) {
+            continue;
+          }
           const fact = ASTExtractor.extractFileFacts(fullPath);
           if (fact) facts.push(fact);
         }

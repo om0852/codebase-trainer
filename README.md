@@ -6,61 +6,60 @@
 
 ---
 
-## 🌟 Major Engine Upgrades Implemented
+## 🌟 Major Features & v1.3.0 Upgrades
 
-1. **Industry-Standard Okapi BM25 Search Algorithm**: Replaced naive substring TF-IDF with true Okapi BM25 ranking algorithm (`k1 = 1.2`, `b = 0.75`) for sub-50ms high-precision search across 49,000+ code chunks.
-2. **Static Vulnerability & Hardcoded Secret Scanner (`cb-trainer security`)**: Detects hardcoded API keys, JWT secrets, unsafe `eval()` / `new Function()` dynamic executions, and SQL injection risks.
-3. **Multi-Language AST Extractor**: Supports TypeScript, JavaScript, Python, Go, Rust, Java, C/C++.
-4. **Architectural Intent Classifier**: Automatically maps files into architectural roles (`controller_route`, `data_model`, `service_business_logic`, `ui_component`, `utility_helper`).
-5. **Reverse Downstream Impact Analyzer (`cb-trainer impact <file>`)**: Traces direct & transitive dependents to warn developers and AI agents before committing breaking route/symbol changes.
-6. **Automated PR Code Reviewer (`cb-trainer pr-review`)**: Generates automated PR review markdown reports (`.codebase/pr_review.md`) with policy and convention enforcement checks.
-7. **Developer Onboarding Guide (`cb-trainer docs`)**: Generates `.codebase/ONBOARDING.md` summarizing architecture and conventions.
-8. **Interactive HTML Dashboard (`cb-trainer ui`)**: Generates a sleek dark-mode visual dashboard (`.codebase/dashboard.html`).
-9. **Auto-Fixer Engine (`cb-trainer fix <file>`)**: Automatically converts explicit `: any` to `: unknown` and legacy `var` to `const`.
+1. **Token-Budgeted AST Skeletonizer (`--max-tokens`)**: Compresses code by 50%–85% into structural AST skeletons—preserving classes, function signatures, interfaces, and docstrings while stripping function bodies into placeholders (`/* ... */` or `pass`).
+2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Automatically parses frontend `fetch()` / `axios` calls and backend Express/Next.js route handlers, flagging payload key mismatches, missing required fields, dead endpoints, and orphan routes.
+3. **PageRank-Weighted Graph Centrality (Aider Style)**: Implements Power Iteration PageRank over module dependencies and call graphs. Core architectural hubs receive boosted ranking over peripheral one-off scripts.
+4. **100% Offline Dense Vector Embeddings**: Pure local semantic vector embedding engine with cosine similarity and hybrid Reciprocal Rank Fusion (BM25 + Dense Vectors + AST Symbols + PageRank).
+5. **Interactive Mermaid Architecture Dashboard (`cb-trainer ui`)**: Generates an interactive dark-mode dashboard with zoomable Mermaid module call graphs and visual circular dependency highlights.
+6. **Live Dynamic MCP Resources**:
+   - `codebase://conventions`: Project architecture rules and coding conventions.
+   - `codebase://routes`: Live map of exposed REST endpoints and consumed services.
+   - `codebase://drift`: Live client-to-server API contract drift status.
+   - `codebase://graph/circular`: Real-time circular import warnings.
+   - `codebase://graph/quality`: Call graph sync I/O alerts and hotspots.
+7. **Official GitHub Action (`action.yml`)**: Pre-built GitHub Action for CI/CD pipelines to run contract drift checks, convention checks, and export SARIF static analysis reports to GitHub Code Scanning.
 
 ---
 
 ## 🛠️ Complete CLI Suite
 
 ```bash
-# 1. Initialize Codebase Intelligence Model & BM25 Index
+# 1. Initialize Codebase Intelligence Model & Vector Index
 npx cb-trainer init
 
-# 2. Perform Okapi BM25 Semantic Vector Search
+# 2. Perform Hybrid Semantic Vector + PageRank Search
 npx cb-trainer search "user authentication token"
 
-# 3. Static Vulnerability & Hardcoded Secret Scan
-npx cb-trainer security
+# 3. Detect Client ↔ Server API Contract Drift & Payload Mismatches
+npx cb-trainer drift
 
-# 4. Multi-Repo Workspace Master Initialization & Cross-Search
-npx cb-trainer global-init
-npx cb-trainer global-search "sentiment authentication token"
+# 4. Generate AI Agent Token-Budgeted Context Pack
+npx cb-trainer context "user login authentication" --max-tokens 1500
 
-# 5. Check Downstream Breaking Change Impact
+# 5. Trace End-to-End Execution Sequence Flow (Mermaid Sequence)
+npx cb-trainer flow "user checkout order"
+
+# 6. Check Downstream Breaking Change Impact
 npx cb-trainer impact src/routes/user.ts
 
-# 6. Generate Automated PR Review Report
-npx cb-trainer pr-review
+# 7. Static Vulnerability & Hardcoded Secret Scan
+npx cb-trainer security
 
-# 7. Generate Developer Onboarding Manual
-npx cb-trainer docs
-
-# 8. Digest AI Agent Zero-Overhead Context Pack
-npx cb-trainer context "user login authentication"
-
-# 9. Audit Call-Graph Dependencies & Code Quality
-npx cb-trainer audit
-
-# 10. Open Interactive HTML Dashboard
+# 8. Open Interactive HTML Dashboard (Mermaid Call Graph)
 npx cb-trainer ui
 
-# 11. Run 1,000-Query Stress Test Benchmark
-npx cb-trainer benchmark
+# 9. Audit Call-Graph Dependencies, Circular Imports & Hotpath I/O
+npx cb-trainer audit
 
-# 12. Run Unit Test Suite
-npx tsx tests/unit.test.ts
+# 10. Generate Automated PR Review Report
+npx cb-trainer pr-review
 
-# 13. Launch MCP Stdio Server
+# 11. Run Unit Test Suite
+npm test
+
+# 12. Launch MCP Stdio Server
 npx cb-trainer mcp
 ```
 
@@ -85,4 +84,4 @@ Add the following to your MCP client config (e.g. `mcp_config.json` in Cursor, C
 
 ## 📄 License
 
-ISC
+MIT

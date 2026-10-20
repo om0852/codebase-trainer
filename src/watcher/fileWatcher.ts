@@ -64,11 +64,12 @@ export class CodebaseWatcher {
     files.forEach(f => console.log(`   - ${path.relative(repoPath, f)}`));
 
     try {
-      // Re-scan AST facts & update semantic BM25 index
+      // Differential AST & semantic update for sub-50ms index freshness
+      const { updatedCount, durationMs } = SemanticSearchEngine.updateFileChunks(repoPath, files);
+      console.log(`[${timestamp}] ⚡ Fast differential update: ${updatedCount} chunks updated in ${durationMs}ms`);
+
+      // Update conventions and call graph
       const facts = ASTExtractor.scanDirectory(repoPath);
-      SemanticSearchEngine.buildIndex(repoPath);
-      
-      // Update conventions & dashboard
       const conventions = ConventionMiner.generateConventions(repoPath, facts);
       ConventionMiner.saveConventions(repoPath, conventions);
 

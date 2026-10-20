@@ -3,6 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,6 +18,7 @@ import { ContextPackGenerator } from '../context/contextPack.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
 import { OnboardingDocsGenerator } from '../enterprise/onboardingDocs.js';
 import { RouteRegistryManager } from '../microservices/routeRegistry.js';
+import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { ModelValidator } from '../validator/modelValidator.js';
 import { DocstringMiner } from '../miner/docstringMiner.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
@@ -29,41 +32,203 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     if (fs.existsSync(path.join(process.cwd(), '.codebase'))) return path.resolve(process.cwd());
     return path.resolve(initialRepoPath || process.cwd());
   }
+
   const server = new Server(
     {
       name: 'codebase-trainer-mcp',
-      version: '1.0.0',
+      version: '1.3.0',
     },
     {
       capabilities: {
         tools: {},
+        resources: {},
       },
     }
   );
 
+  // ==========================================
+  // MCP Resources (Live dynamic context feeds)
+  // ==========================================
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: 'codebase://conventions',
+          name: 'Codebase Conventions & Architecture Rules',
+          description: 'Dynamic structural rules, export patterns, and naming conventions mined for this project.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'codebase://routes',
+          name: 'Microservice API Routes Map',
+          description: 'Live map of all exposed HTTP endpoints and consumed external service routes.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'codebase://graph/circular',
+          name: 'Circular Dependency Warnings',
+          description: 'Real-time circular import dependencies and architecture bottleneck alerts.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'codebase://graph/quality',
+          name: 'Call Graph Quality & Sync I/O Alerts',
+          description: 'Detected synchronous I/O in loops, high-complexity functions, and dead code warnings.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'codebase://drift',
+          name: 'Client-to-Server API Contract Drift Report',
+          description: 'Live payload drift, field mismatches, and orphan endpoint warnings between client and backend.',
+          mimeType: 'application/json',
+        },
+      ],
+    };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+    const repoPath = resolveRepoPath();
+
+    if (uri === 'codebase://conventions') {
+      let conventions = ConventionMiner.loadConventions(repoPath);
+      if (!conventions) {
+        const facts = ASTExtractor.scanDirectory(repoPath);
+        conventions = ConventionMiner.generateConventions(repoPath, facts);
+      }
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(conventions, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'codebase://routes') {
+      const registry = RouteRegistryManager.extractServiceRoutes(repoPath);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(registry, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'codebase://graph/circular') {
+      const graph = CallGraphAnalyzer.analyzeGraph(repoPath);
+      const circularIssues = graph.qualityIssues.filter(q => q.type === 'circular_dependency');
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(circularIssues, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'codebase://graph/quality') {
+      const graph = CallGraphAnalyzer.analyzeGraph(repoPath);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(graph.qualityIssues, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'codebase://drift') {
+      const report = ContractDriftDetector.detectDrift(repoPath);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(report, null, 2),
+          },
+        ],
+      };
+    }
+
+    throw new Error(`Resource not found: ${uri}`);
+  });
+
+  // ==========================================
+  // MCP Tools
+  // ==========================================
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
         {
-          name: 'get_codebase_conventions',
-          description: 'Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-        },
-        {
-          name: 'trace_execution_flow',
+          name: 'trace_flow',
           description: 'Generate step-by-step execution flow and Mermaid sequence diagram for how a feature or architecture works.',
           inputSchema: {
             type: 'object',
             properties: {
               feature: {
                 type: 'string',
-                description: 'Feature or architectural query (e.g., E2EE encryption flow, user login).',
+                description: 'Feature or architectural query (e.g., E2EE encryption flow, user login, BM25 search).',
               },
             },
             required: ['feature'],
+          },
+        },
+        {
+          name: 'get_context_pack',
+          description: 'Generate pre-digested zero-overhead AI context pack with optional token budget (--max-tokens) and AST skeletonization.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              task: {
+                type: 'string',
+                description: 'Task or feature description.',
+              },
+              max_tokens: {
+                type: 'number',
+                description: 'Maximum token budget (e.g., 2000). Compresses source snippets into AST skeletons if budget is tight.',
+              },
+            },
+            required: ['task'],
+          },
+        },
+        {
+          name: 'impact_analysis',
+          description: 'Analyze downstream breaking change impacts when modifying a file, route, or symbol before editing code.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              target: {
+                type: 'string',
+                description: 'File path, route, or symbol name being modified.',
+              },
+            },
+            required: ['target'],
+          },
+        },
+        {
+          name: 'detect_api_drift',
+          description: 'Detect client-to-server API contract drift, payload key mismatches, query parameter drift, and orphan routes.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'get_codebase_conventions',
+          description: 'Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
           },
         },
         {
@@ -88,20 +253,6 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           inputSchema: {
             type: 'object',
             properties: {},
-          },
-        },
-        {
-          name: 'get_agent_context_pack',
-          description: 'Generate pre-digested zero-overhead AI context pack containing rules, impact warnings, and top semantic code snippets for a task.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              task: {
-                type: 'string',
-                description: 'Task or feature description.',
-              },
-            },
-            required: ['task'],
           },
         },
         {
@@ -179,20 +330,6 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           },
         },
         {
-          name: 'get_change_impact_analysis',
-          description: 'Analyze downstream breaking change impacts when modifying a file, route, or symbol.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              target: {
-                type: 'string',
-                description: 'File path, route, or symbol name being modified.',
-              },
-            },
-            required: ['target'],
-          },
-        },
-        {
           name: 'visualize_architecture',
           description: 'Generate a Mermaid diagram representing the high-level module architecture of the codebase.',
           inputSchema: {
@@ -216,10 +353,65 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     const { name, arguments: args } = request.params;
     const repoPath = resolveRepoPath(args?.repoPath ? String(args.repoPath) : undefined);
 
+    // Standardized & Aliased: trace_flow / trace_execution_flow
+    if (name === 'trace_flow' || name === 'trace_execution_flow') {
+      const feature = String(args?.feature || '');
+      const flow = ExecutionFlowTracer.traceFlow(repoPath, feature);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(flow, null, 2),
+          },
+        ],
+      };
+    }
+
+    // Standardized & Aliased: get_context_pack / get_agent_context_pack
+    if (name === 'get_context_pack' || name === 'get_agent_context_pack') {
+      const task = String(args?.task || '');
+      const maxTokens = args?.max_tokens ? Number(args.max_tokens) : undefined;
+      const pack = ContextPackGenerator.generateContextPack(repoPath, task, maxTokens);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(pack, null, 2),
+          },
+        ],
+      };
+    }
+
+    // Standardized & Aliased: impact_analysis / get_change_impact_analysis
+    if (name === 'impact_analysis' || name === 'get_change_impact_analysis') {
+      const target = String(args?.target || '');
+      const result = ImpactAnalyzer.analyzeImpact(repoPath, target);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    }
+
+    // New: detect_api_drift
+    if (name === 'detect_api_drift') {
+      const report = ContractDriftDetector.detectDrift(repoPath);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(report, null, 2),
+          },
+        ],
+      };
+    }
+
     if (name === 'get_codebase_conventions') {
       let conventions = ConventionMiner.loadConventions(repoPath);
       if (!conventions) {
-        // Auto-train and generate model on demand via MCP
         const facts = ASTExtractor.scanDirectory(repoPath);
         SemanticSearchEngine.buildIndex(repoPath);
         conventions = ConventionMiner.generateConventions(repoPath, facts);
@@ -230,19 +422,6 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           {
             type: 'text',
             text: JSON.stringify(conventions, null, 2),
-          },
-        ],
-      };
-    }
-
-    if (name === 'trace_execution_flow') {
-      const feature = String(args?.feature || '');
-      const flow = ExecutionFlowTracer.traceFlow(repoPath, feature);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(flow, null, 2),
           },
         ],
       };
@@ -280,19 +459,6 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           {
             type: 'text',
             text: JSON.stringify(health, null, 2),
-          },
-        ],
-      };
-    }
-
-    if (name === 'get_agent_context_pack') {
-      const task = String(args?.task || '');
-      const pack = ContextPackGenerator.generateContextPack(repoPath, task);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(pack, null, 2),
           },
         ],
       };
@@ -376,19 +542,6 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
       };
     }
 
-    if (name === 'get_change_impact_analysis') {
-      const target = String(args?.target || '');
-      const result = ImpactAnalyzer.analyzeImpact(repoPath, target);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    }
-
     if (name === 'check_diff_against_standards') {
       const diffStr = String(args?.diff || '');
       const conventions = ConventionMiner.loadConventions(repoPath);
@@ -399,7 +552,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           violations.push({
             ruleId: 'no-explicit-any',
             message: 'Avoid explicit `any` type casting. Prefer typed interfaces or generics.',
-            severity: 'warning'
+            severity: 'warning',
           });
         }
       }
@@ -439,7 +592,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
          scannedFiles: 35,
          duplicatesFound: 0,
          score: 'A+',
-         message: "No major code duplication detected. Codebase is well-abstracted."
+         message: "No major code duplication detected. Codebase is well-abstracted.",
       };
       
       return {

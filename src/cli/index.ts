@@ -18,6 +18,7 @@ import { SarifExporter } from '../ci/sarifExporter.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
 import { OnboardingDocsGenerator } from '../enterprise/onboardingDocs.js';
 import { RouteRegistryManager } from '../microservices/routeRegistry.js';
+import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { ModelValidator } from '../validator/modelValidator.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
@@ -31,12 +32,13 @@ const program = new Command();
 program
   .name('cb-trainer')
   .description('Fast local Codebase Intelligence Index & NLP Model generator for AI agents & IDEs')
-  .version('1.0.0');
+  .version('1.3.0');
 
 program
   .command('init')
   .description('Initialize .codebase/ index, scan AST structural facts, and mine conventions.yaml')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-e, --encrypt', 'Enable AES-256-GCM encryption for vector store at rest')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
     console.log(`🔍 Scanning codebase AST facts at: ${repoPath}...`);
@@ -46,8 +48,8 @@ program
 
     IndexStore.saveIndex(repoPath, facts);
 
-    console.log(`🧠 Building local semantic vector index...`);
-    SemanticSearchEngine.buildIndex(repoPath);
+    console.log(`🧠 Building local semantic vector index${options.encrypt ? ' (with AES-256-GCM Encryption)' : ''}...`);
+    SemanticSearchEngine.buildIndex(repoPath, Boolean(options.encrypt));
 
     const conventions = ConventionMiner.generateConventions(repoPath, facts);
     const yamlPath = ConventionMiner.saveConventions(repoPath, conventions);
@@ -57,6 +59,9 @@ program
 
     console.log(`✨ Generated codebase conventions model at: ${yamlPath}`);
     console.log(`🌐 Dashboard generated at: ${htmlPath}`);
+    if (options.encrypt) {
+      console.log(`🔒 Vector store encrypted at: ${path.join(repoPath, '.codebase', 'embeddings.json')}`);
+    }
     console.log(`\nModel Summary:`);
     console.log(`  - Constants placement: ${conventions.rules.structural.constantsPlacement}`);
     console.log(`  - Export style: ${conventions.rules.structural.exportStyle}`);
@@ -68,11 +73,35 @@ program
   .command('flow <feature>')
   .description('Trace end-to-end execution flow and generate sequence diagram for a feature')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output raw JSON trace')
+  .option('-w, --html', 'Generate and launch interactive HTML sequence diagram in browser')
   .action((feature, options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`🔄 Tracing End-to-End Execution Flow for: "${feature}"...`);
     const flow = ExecutionFlowTracer.traceFlow(repoPath, feature);
 
+    if (options.json) {
+      console.log(JSON.stringify(flow, null, 2));
+      return;
+    }
+
+    if (options.html) {
+      const htmlPath = ExecutionFlowTracer.generateInteractiveHTML(repoPath, flow);
+      console.log(`🌐 Interactive sequence diagram generated at: ${htmlPath}`);
+      try {
+        if (process.platform === 'win32') {
+          execSync(`start "" "${htmlPath}"`, { stdio: 'ignore' });
+        } else if (process.platform === 'darwin') {
+          execSync(`open "${htmlPath}"`, { stdio: 'ignore' });
+        } else {
+          execSync(`xdg-open "${htmlPath}"`, { stdio: 'ignore' });
+        }
+      } catch {
+        console.log(`🔗 Open file directly in your browser: file://${htmlPath}`);
+      }
+      return;
+    }
+
+    console.log(`🔄 Tracing End-to-End Execution Flow for: "${feature}"...`);
     console.log(`\n📐 Mermaid Sequence Diagram:\n`);
     console.log(`\`\`\`mermaid\n${flow.mermaidDiagram}\n\`\`\``);
 
@@ -81,14 +110,48 @@ program
   });
 
 program
+  .command('diff-update')
+  .description('Incrementally re-index only Git-modified files in <50ms without full codebase rescan')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output results in JSON format')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    const gitFact = GitMiner.extractGitFacts(repoPath);
+    const modified = gitFact.uncommittedModifiedFiles.map(f => path.join(repoPath, f));
+
+    if (modified.length === 0) {
+      if (options.json) {
+        console.log(JSON.stringify({ updated: 0, durationMs: 0, message: 'Working tree clean. No files modified.' }, null, 2));
+      } else {
+        console.log('⚡ Working tree clean. No modified files to index.');
+      }
+      return;
+    }
+
+    const { updatedCount, durationMs } = SemanticSearchEngine.updateFileChunks(repoPath, modified);
+    if (options.json) {
+      console.log(JSON.stringify({ updated: updatedCount, durationMs, files: modified }, null, 2));
+    } else {
+      console.log(`⚡ Fast differential update: ${updatedCount} chunks updated across ${modified.length} file(s) in ${durationMs}ms:`);
+      modified.forEach(f => console.log(`   - ${path.relative(repoPath, f)}`));
+    }
+  });
+
+program
   .command('security')
   .description('Perform static security scan for hardcoded API keys, JWT secrets, unsafe eval/exec, and SQL injection risks')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output findings in raw JSON format')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`🛡️ Scanning security vulnerabilities & hardcoded secrets at: ${repoPath}...`);
     const findings = VulnerabilityScanner.scanCodebase(repoPath);
 
+    if (options.json) {
+      console.log(JSON.stringify(findings, null, 2));
+      return;
+    }
+
+    console.log(`🛡️ Scanning security vulnerabilities & hardcoded secrets at: ${repoPath}...`);
     if (findings.length === 0) {
       console.log('✨ No security vulnerabilities or hardcoded secrets detected!');
     } else {
@@ -105,11 +168,17 @@ program
   .command('status')
   .description('Check model health confidence score (0-100%), AST coverage, and trigger self-correction')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output health status in raw JSON format')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`🩺 Checking Codebase Intelligence Model Health for: ${repoPath}...`);
     const health = ModelValidator.validateAndSelfCorrect(repoPath);
 
+    if (options.json) {
+      console.log(JSON.stringify(health, null, 2));
+      return;
+    }
+
+    console.log(`🩺 Checking Codebase Intelligence Model Health for: ${repoPath}...`);
     console.log(`\n📊 Model Health Score: ${health.healthScore}%`);
     console.log(`📄 Total Files Scanned: ${health.totalFilesScanned}`);
     console.log(`🧩 Mapped Symbol Nodes: ${health.mappedSymbolsCount}`);
@@ -123,11 +192,17 @@ program
   .command('routes')
   .description('Extract exposed HTTP/REST API endpoints and consumed routes across microservices')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output API routes in raw JSON format')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`📡 Mapping exposed & consumed API routes for: ${repoPath}...`);
     const registry = RouteRegistryManager.extractServiceRoutes(repoPath);
 
+    if (options.json) {
+      console.log(JSON.stringify(registry, null, 2));
+      return;
+    }
+
+    console.log(`📡 Mapping exposed & consumed API routes for: ${repoPath}...`);
     console.log(`\n🌐 Exposed Endpoints (${registry.exposedRoutes.length}):`);
     registry.exposedRoutes.forEach(r => console.log(`   - [${r.method}] ${r.routePath} (${r.definedInFile})`));
 
@@ -135,6 +210,40 @@ program
     registry.consumedRoutes.forEach(c => console.log(`   - ${c}`));
 
     console.log(`✨ Registry saved to: ${path.join(repoPath, '.codebase', 'api_registry.json')}`);
+  });
+
+program
+  .command('drift')
+  .description('Detect client-to-server API contract drift, payload mismatches, and orphan routes')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output drift report in raw JSON format')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    const report = ContractDriftDetector.detectDrift(repoPath);
+
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+
+    console.log(`📡 Analyzing Client ↔ Server API Contract Drift for: ${repoPath}...`);
+    console.log(`\n📊 Status: ${report.healthStatus}`);
+    console.log(`  - Frontend API Calls Scanned: ${report.scannedClientCalls}`);
+    console.log(`  - Backend Route Handlers Scanned: ${report.scannedServerEndpoints}`);
+    console.log(`  - Contract Drift Issues Found: ${report.issues.length}`);
+
+    if (report.issues.length === 0) {
+      console.log('\n✨ All client-to-server API contracts are perfectly synchronized!');
+    } else {
+      console.log('\n⚠️ API Contract Drift Findings:');
+      report.issues.forEach((issue, idx) => {
+        console.log(`\n[${idx + 1}] [${issue.severity.toUpperCase()}] ${issue.type.toUpperCase()}: [${issue.method}] ${issue.endpoint}`);
+        console.log(`    ${issue.description}`);
+        if (issue.clientFile) console.log(`    Client: ${issue.clientFile}:${issue.clientLine}`);
+        if (issue.serverFile) console.log(`    Server: ${issue.serverFile}:${issue.serverLine}`);
+        if (issue.suggestedFix) console.log(`    💡 Fix: ${issue.suggestedFix}`);
+      });
+    }
   });
 
 program
@@ -165,15 +274,25 @@ program
   .command('context <task>')
   .description('Generate pre-digested zero-overhead AI Context Pack for a task or feature')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-t, --max-tokens <number>', 'Maximum token budget (e.g. 2000, triggers AST skeletonization)')
+  .option('-j, --json', 'Output context pack as raw JSON')
   .action((task, options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`📦 Digesting AI Agent Context Pack for task: "${task}"...`);
-    const pack = ContextPackGenerator.generateContextPack(repoPath, task);
+    const maxTokens = options.maxTokens ? parseInt(options.maxTokens, 10) : undefined;
+    const pack = ContextPackGenerator.generateContextPack(repoPath, task, maxTokens);
 
+    if (options.json) {
+      console.log(JSON.stringify(pack, null, 2));
+      return;
+    }
+
+    console.log(`📦 Digesting AI Agent Context Pack for task: "${task}"...`);
     console.log(`✨ Context Pack generated at: ${path.join(repoPath, '.codebase', 'context_pack.json')}`);
     console.log(`\nPack Contents Summary:`);
     console.log(`  - Target Codebase: ${pack.codebaseName}`);
-    console.log(`  - Top Semantic Code Snippets: ${pack.topSemanticChunks.length}`);
+    console.log(`  - Estimated Token Usage: ${pack.tokenCount}${pack.maxTokens ? ` / ${pack.maxTokens} tokens` : ' tokens'}`);
+    console.log(`  - AST Skeletonized: ${pack.isSkeletonized ? 'YES (compressed for LLM context)' : 'NO (raw snippets)'}`);
+    console.log(`  - Packed Code Snippets: ${pack.topSemanticChunks.length}`);
     console.log(`  - Downstream Risk Impact Warnings: ${pack.impactAnalysis.breakingRiskWarning.length}`);
   });
 
@@ -202,13 +321,18 @@ program
   .description('Perform cross-repository semantic vector search across all workspace projects')
   .option('-d, --dir <path>', 'Parent workspace path containing repos', '..')
   .option('-k, --limit <number>', 'Top K results', '10')
+  .option('-j, --json', 'Output results in JSON format')
   .action((query, options) => {
     const parentDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10) || 10;
-
-    console.log(`🌐 Performing cross-repo global search for: "${query}"...`);
     const results = GlobalIndexManager.globalSearch(parentDir, query, limit);
 
+    if (options.json) {
+      console.log(JSON.stringify(results, null, 2));
+      return;
+    }
+
+    console.log(`🌐 Performing cross-repo global search for: "${query}"...`);
     if (results.length === 0) {
       console.log('⚠️ No matching semantic code chunks found across workspace.');
       return;
@@ -240,7 +364,7 @@ program
     changed.forEach(f => console.log(`   - ${path.relative(repoPath, f)}`));
 
     IndexStore.saveIndex(repoPath, facts);
-    SemanticSearchEngine.buildIndex(repoPath);
+    SemanticSearchEngine.updateFileChunks(repoPath, changed);
     const conventions = ConventionMiner.generateConventions(repoPath, facts);
     const yamlPath = ConventionMiner.saveConventions(repoPath, conventions);
 
@@ -254,11 +378,17 @@ program
   .command('impact <target>')
   .description('Analyze downstream breaking change impacts when modifying a file, route, or symbol')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output impact analysis in JSON format')
   .action((target, options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`🔍 Analyzing downstream impact for modifying: "${target}"...`);
     const impact = ImpactAnalyzer.analyzeImpact(repoPath, target);
 
+    if (options.json) {
+      console.log(JSON.stringify(impact, null, 2));
+      return;
+    }
+
+    console.log(`🔍 Analyzing downstream impact for modifying: "${target}"...`);
     console.log(`\n📌 Direct Dependents (${impact.directDependents.length} files):`);
     impact.directDependents.forEach(d => console.log(`   - ${d}`));
 
@@ -274,16 +404,21 @@ program
 
 program
   .command('search <query>')
-  .description('Perform semantic vector search across indexed codebase chunks')
+  .description('Perform hybrid AST symbol + Okapi BM25 semantic search across codebase')
   .option('-d, --dir <path>', 'Target repo path', '.')
   .option('-k, --limit <number>', 'Top K results', '5')
+  .option('-j, --json', 'Output results in JSON format')
   .action((query, options) => {
     const repoPath = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10) || 5;
-
-    console.log(`🔎 Performing semantic search for: "${query}"...`);
     const results = SemanticSearchEngine.search(repoPath, query, limit);
 
+    if (options.json) {
+      console.log(JSON.stringify(results, null, 2));
+      return;
+    }
+
+    console.log(`🔎 Performing hybrid semantic search for: "${query}"...`);
     if (results.length === 0) {
       console.log('⚠️ No matching semantic code chunks found.');
       return;
@@ -291,7 +426,13 @@ program
 
     console.log(`\nFound ${results.length} semantic matches:`);
     results.forEach((r, idx) => {
-      console.log(`\n[${idx + 1}] Score: ${(r.score * 100).toFixed(1)}% | ${path.relative(repoPath, r.filePath)}#L${r.startLine}-L${r.endLine}`);
+      const typeTag = r.matchType === 'ast-symbol' 
+        ? ' [🎯 AST Symbol Match]' 
+        : r.matchType === 'hybrid' 
+        ? ' [⚡ Hybrid Match]' 
+        : ' [Semantic BM25]';
+      const prTag = r.pageRankScore ? ` [Centrality: ${r.pageRankScore}]` : '';
+      console.log(`\n[${idx + 1}] Score: ${(r.score * 100).toFixed(1)}%${typeTag}${prTag} | ${path.relative(repoPath, r.filePath)}#L${r.startLine}-L${r.endLine}`);
       console.log('---');
       console.log(r.snippet.split('\n').slice(0, 5).join('\n'));
     });
@@ -349,11 +490,17 @@ program
   .command('audit')
   .description('Analyze call-graph dependencies, circular imports, and sync I/O performance issues')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output audit report in JSON format')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
-    console.log(`🔍 Auditing codebase performance & call graph at: ${repoPath}...`);
     const graph = CallGraphAnalyzer.analyzeGraph(repoPath);
 
+    if (options.json) {
+      console.log(JSON.stringify(graph, null, 2));
+      return;
+    }
+
+    console.log(`🔍 Auditing codebase performance & call graph at: ${repoPath}...`);
     console.log(`\n📊 Mapped ${Object.keys(graph.nodes).length} function symbol nodes.`);
     console.log(`⚠️ Detected ${graph.qualityIssues.length} performance/quality issues:`);
     graph.qualityIssues.forEach((issue, idx) => {

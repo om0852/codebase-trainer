@@ -8,6 +8,7 @@ export interface ASTFact {
   importedModules: string[];
   funcCount: number;
   avgFuncLength: number;
+  symbols?: string[];
 }
 
 export interface CodebaseConvention {

@@ -1,0 +1,52 @@
+name: 'Codebase Intelligence & PR Review'
+description: 'Fast local codebase intelligence indexer, API contract drift detector, and AST convention enforcer'
+author: 'Antigravity Engineering'
+branding:
+  icon: 'cpu'
+  color: 'blue'
+
+inputs:
+  target-dir:
+    description: 'Path to target repository root'
+    required: false
+    default: '.'
+  check-drift:
+    description: 'Enforce client-to-server API contract drift validation'
+    required: false
+    default: 'true'
+  sarif-output:
+    description: 'Path to output SARIF report for GitHub Code Scanning'
+    required: false
+    default: '.codebase/results.sarif'
+  token-budget:
+    description: 'Context pack max token budget for AI agent workflows'
+    required: false
+    default: '2000'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Codebase Index & AST Convention Mining
+      shell: bash
+      run: |
+        echo "🔍 Indexing Codebase Architecture & AST Facts..."
+        node dist/cli/index.js init -d "${{ inputs.target-dir }}"
+
+    - name: Check Client-to-Server API Contract Drift
+      if: ${{ inputs.check-drift == 'true' }}
+      shell: bash
+      run: |
+        echo "📡 Checking Client ↔ Server API Contract Drift..."
+        node dist/cli/index.js drift -d "${{ inputs.target-dir }}"
+
+    - name: Generate SARIF Security & Quality Audit Report
+      shell: bash
+      run: |
+        echo "🛡️ Exporting SARIF Static Analysis Report..."
+        node dist/cli/index.js ci -d "${{ inputs.target-dir }}"
+
+    - name: Audit Call Graph & Circular Dependencies
+      shell: bash
+      run: |
+        echo "⚠️ Auditing Circular Dependencies & Hotpath Sync I/O..."
+        node dist/cli/index.js audit -d "${{ inputs.target-dir }}"
