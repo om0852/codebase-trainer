@@ -3,8 +3,8 @@ import { initCrosshair } from './crosshair.js';
 // Tool Data Dictionary
 const mcpToolsData = {
   get_codebase_conventions: {
-    tag: "MCP PROTOCOL TOOL",
-    desc: "Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.",
+    tag: "MCP PROTOCOL RESOURCE & TOOL",
+    desc: "Fetch structural rules, conventions, git norms, and formatting guidelines mined from the repo AST.",
     json: `{
   "codebaseName": "codebase-trainer",
   "rules": {
@@ -17,7 +17,8 @@ const mcpToolsData = {
       "commitFormat": "Conventional Commits (feat, fix, docs)",
       "branchNaming": "feature/*, fix/*"
     }
-  }
+  },
+  "resourceUri": "codebase://conventions"
 }`
   },
   trace_execution_flow: {
@@ -33,85 +34,99 @@ const mcpToolsData = {
   "mermaidDiagram": "sequenceDiagram\\n  autonumber\\n  actor Client\\n  Client->>server_ts: 1. Initiate query\\n  server_ts->>keys_ts: 2. Derive key\\n  keys_ts->>cipher_ts: 3. Encrypt payload"
 }`
   },
-  search_codebase: {
-    tag: "OKAPI BM25 SEARCH",
-    desc: "Perform semantic vector search across indexed code chunks, symbols, and conventions with TF-IDF scoring.",
+  detect_api_drift: {
+    tag: "CROSS-SERVICE CONTRACT VALIDATOR",
+    desc: "Scan frontend API client calls (fetch/axios) against backend route schemas, flagging 404s, method mismatches, and payload drift.",
     json: `{
-  "query": "BM25 ranking formula",
+  "scannedClientCalls": 24,
+  "scannedServerEndpoints": 32,
+  "healthStatus": "DRIFT_DETECTED",
+  "issues": [
+    {
+      "type": "PARAM_MISMATCH",
+      "severity": "high",
+      "clientFile": "website/src/api.ts",
+      "endpoint": "/api/v1/auth/token",
+      "details": "Client payload missing required field 'refreshToken'"
+    }
+  ],
+  "resourceUri": "codebase://drift"
+}`
+  },
+  get_agent_context_pack: {
+    tag: "TOKEN-BUDGETED SKELETON PACK",
+    desc: "Generate pre-digested AI context pack with token budgeting (--max-tokens) and automatic AST skeletonization (52%–85% token reduction).",
+    json: `{
+  "task": "Refactor auth middleware and route guards",
+  "tokenBudget": 8000,
+  "estimatedTokens": 3240,
+  "skeletonizedFiles": [
+    { "file": "src/mcp/server.ts", "compressionRatio": "68%", "preservedInterfaces": 14 }
+  ],
+  "conventionsSummary": "ESM named exports, explicit typing required",
+  "impactWarnings": ["Modifying server.ts affects 4 CLI handlers"]
+}`
+  },
+  search_codebase: {
+    tag: "HYBRID RRF VECTOR SEARCH",
+    desc: "Execute reciprocal rank fusion combining Okapi BM25, 128D local subword dense embeddings, AST symbols, and PageRank centrality.",
+    json: `{
+  "query": "PageRank power iteration algorithm",
+  "fusionMode": "RRF (BM25 + 128D Dense + PageRank)",
   "hits": [
     {
-      "filePath": "src/semantic/searchEngine.ts",
-      "startLine": 83,
-      "endLine": 120,
-      "score": 4.82,
-      "snippet": "public static search(repoPath: string, query: string): SearchResult[]..."
+      "filePath": "src/graph/pageRank.ts",
+      "startLine": 45,
+      "endLine": 98,
+      "score": 0.942,
+      "snippet": "export function computePageRank(graph: DependencyGraph): Map<string, number>..."
     }
   ]
 }`
   },
+  get_change_impact_analysis: {
+    tag: "DIFF-AWARE BLAST RADIUS",
+    desc: "Trace caller dependency trees, downstream routes, and calculate breaking risk scores before committing code.",
+    json: `{
+  "target": "astExtractor.ts",
+  "affectedRoutes": ["src/cli/index.ts", "src/mcp/server.ts", "src/miner/conventionMiner.ts"],
+  "downstreamDependentsCount": 7,
+  "breakingRiskScore": "MEDIUM"
+}`
+  },
+  scan_security_vulnerabilities: {
+    tag: "ZERO-CLOUD STATIC SCAN",
+    desc: "Zero-cloud static analysis detecting exposed API keys, JWT secrets, unsafe eval()/exec(), and SQL injection vulnerabilities.",
+    json: `{
+  "status": "SECURE",
+  "findings": [],
+  "scannedFiles": 48,
+  "vulnerabilityScore": "100/100",
+  "sarifExport": ".codebase/results.sarif"
+}`
+  },
+  analyze_codebase_quality: {
+    tag: "PAGERANK & ARCHITECTURE AUDIT",
+    desc: "Evaluate module centrality, detect circular dependency cycles, high cyclomatic complexity, and synchronous I/O on hot paths.",
+    json: `{
+  "mappedNodes": 34,
+  "circularDependencies": [],
+  "topHubModules": [
+    { "file": "src/semantic/searchEngine.ts", "pageRank": 0.184 },
+    { "file": "src/storage/db.ts", "pageRank": 0.162 }
+  ],
+  "resourceUri": "codebase://graph/quality"
+}`
+  },
   search_global_workspace: {
     tag: "MULTI-REPO INDEX",
-    desc: "Search across all 12 trained workspace microservice projects in parallel.",
+    desc: "Search across all trained workspace microservice projects in parallel.",
     json: `{
   "query": "jwt auth middleware",
   "globalResults": [
     { "repo": "XtraSecurity", "file": "src/auth/jwt.ts", "score": 5.1 },
     { "repo": "XtraPass", "file": "src/vault/session.ts", "score": 4.6 }
   ]
-}`
-  },
-  get_change_impact_analysis: {
-    tag: "CALL GRAPH IMPACT",
-    desc: "Trace downstream routes, callers, and modules at risk of breaking before editing code.",
-    json: `{
-  "target": "astExtractor.ts",
-  "affectedRoutes": ["src/cli/index.ts", "src/mcp/server.ts", "src/miner/conventionMiner.ts"],
-  "breakingRiskScore": "MEDIUM"
-}`
-  },
-  scan_security_vulnerabilities: {
-    tag: "STATIC SECURITY SCAN",
-    desc: "Scan for hardcoded secrets, JWT keys, unsafe eval()/exec(), and SQL injection risks.",
-    json: `{
-  "status": "SECURE",
-  "findings": [],
-  "scannedFiles": 30,
-  "vulnerabilityScore": "100/100"
-}`
-  },
-  analyze_codebase_quality: {
-    tag: "QUALITY & COMPLEXITY",
-    desc: "Detect circular imports, high cyclomatic complexity, and synchronous I/O executed inside loops.",
-    json: `{
-  "mappedNodes": 17,
-  "qualityIssues": [
-    {
-      "type": "sync_io_hotpath",
-      "filePath": "src/graph/callGraph.ts",
-      "line": 37,
-      "severity": "warning"
-    }
-  ]
-}`
-  },
-  get_agent_context_pack: {
-    tag: "ZERO-OVERHEAD CONTEXT PACK",
-    desc: "Generate pre-digested zero-overhead AI context pack containing rules, warnings, and top code snippets.",
-    json: `{
-  "task": "Refactor auth middleware",
-  "conventionsSummary": "ESM named exports, explicit typing required",
-  "topSnippets": ["src/mcp/server.ts#L195-L235"],
-  "impactWarnings": ["Modifying server.ts affects 4 CLI handlers"]
-}`
-  },
-  detect_api_drift: {
-    tag: "CONTRACT DRIFT ENGINE",
-    desc: "Scan client fetch calls against backend route handlers, flagging payload mismatches, missing fields, and dead routes.",
-    json: `{
-  "scannedClientCalls": 18,
-  "scannedServerEndpoints": 24,
-  "healthStatus": "HEALTHY",
-  "issues": []
 }`
   }
 };
