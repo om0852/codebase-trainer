@@ -300,5 +300,29 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: currentScrollY, behavior: 'instant' });
     });
   });
+
+  // Competitor Comparison Tab Switcher
+  const compTabs = document.querySelectorAll('.comp-tab-btn');
+  const compPanes = document.querySelectorAll('.comp-tab-pane');
+
+  compTabs.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentScrollY = window.scrollY;
+
+      compTabs.forEach(b => b.classList.remove('active'));
+      compPanes.forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      const targetTab = btn.getAttribute('data-comptab');
+      const targetPane = document.getElementById(`pane-comp-${targetTab}`);
+      if (targetPane) {
+        targetPane.classList.add('active');
+      }
+
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+    });
+  });
 });
+
 
