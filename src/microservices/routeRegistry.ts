@@ -58,8 +58,9 @@ export class RouteRegistryManager {
       consumedRoutes: Array.from(consumedRoutes)
     };
 
-    const outPath = path.join(repoPath, '.codebase', 'api_registry.json');
-    fs.writeFileSync(outPath, JSON.stringify(registry, null, 2), 'utf8');
+    const outDir = path.join(repoPath, '.codebase');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'api_registry.json'), JSON.stringify(registry, null, 2), 'utf8');
 
     return registry;
   }

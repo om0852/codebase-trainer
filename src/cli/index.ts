@@ -16,6 +16,8 @@ import { GlobalIndexManager } from '../multi/globalIndex.js';
 import { ContextPackGenerator } from '../context/contextPack.js';
 import { SarifExporter } from '../ci/sarifExporter.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
+import { DiffChecker } from '../review/diffChecker.js';
+import { DiffParser } from '../review/diffParser.js';
 import { OnboardingDocsGenerator } from '../enterprise/onboardingDocs.js';
 import { RouteRegistryManager } from '../microservices/routeRegistry.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
@@ -253,12 +255,13 @@ program
 
 program
   .command('pr-review')
-  .description('Generate automated PR review report with policy enforcement checks')
+  .description('Generate a Markdown PR review report for the git diff against HEAD (or --base)')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-b, --base <ref>', 'Compare the working tree against this git ref instead of HEAD')
   .action((options) => {
     const repoPath = path.resolve(options.dir);
     console.log(`🤖 Generating PR review report for: ${repoPath}...`);
-    const report = PRReviewer.reviewPR(repoPath);
+    const report = PRReviewer.reviewPR(repoPath, undefined, options.base);
 
     console.log(`\n${report.summaryMarkdown}`);
     console.log(`✨ Report saved to: ${path.join(repoPath, '.codebase', 'pr_review.md')}`);
@@ -555,36 +558,35 @@ program
 
 program
   .command('review [target]')
-  .description('Review file or git diff against codebase conventions')
+  .description('Check a file, or the git diff against HEAD (or --base), for secrets, security risks, broken imports, API drift and convention violations')
   .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-b, --base <ref>', 'Compare the working tree against this git ref instead of HEAD')
+  .option('-j, --json', 'Output the check report as JSON')
   .action((target, options) => {
     const repoPath = path.resolve(options.dir);
-    const conventions = ConventionMiner.loadConventions(repoPath);
-
-    if (!conventions) {
-      console.error('❌ No codebase model found. Run `cb-trainer init` first.');
-      process.exit(1);
-    }
-
-    console.log(`🔍 Reviewing target against ${conventions.codebaseName} conventions...`);
-    let hasViolations = false;
-    let contentToReview = '';
-
+    let report;
     if (target && fs.existsSync(target)) {
-      contentToReview = fs.readFileSync(target, 'utf8');
+      // Reviewing a single file treats every line as added
+      const rel = path.relative(repoPath, path.resolve(target)).replace(/\\/g, '/');
+      report = DiffChecker.checkFiles(repoPath, [DiffParser.asAddedFile(rel, fs.readFileSync(target, 'utf8'))], `file ${rel}`);
     } else {
-      console.log('ℹ️  No file specified. Reviewing uncommitted git diff...');
-      contentToReview = GitMiner.getUncommittedDiff(repoPath);
+      report = DiffChecker.check(repoPath, { base: options.base });
     }
 
-    if (conventions.rules.structural.typeAnnotationRequirement && contentToReview.includes(': any')) {
-      console.warn(`⚠️ Warning: Explicit \`any\` casting detected (violates typeAnnotationRequirement).`);
-      hasViolations = true;
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(`🔍 Checking ${report.source}...`);
+      if (report.error) console.error(`❌ ${report.error}`);
+      report.findings.forEach(f => {
+        const icon = f.severity === 'error' ? '❌' : f.severity === 'warning' ? '⚠️' : 'ℹ️';
+        console.log(`${icon} ${f.filePath}${f.line ? `:${f.line}` : ''} [${f.ruleId}] ${f.message}`);
+        if (f.snippet) console.log(`     ${f.snippet}`);
+      });
+      console.log(`\n${report.passed ? '✅' : '🚨'} ${report.summary}`);
+      console.log(`Not checked: ${report.notCovered.join('; ')}.`);
     }
-
-    if (!hasViolations) {
-      console.log('✅ Code change satisfies all codebase conventions!');
-    }
+    if (!report.passed) process.exitCode = 1;
   });
 
 const hooks = program.command('hooks').description('Manage automated git hooks');

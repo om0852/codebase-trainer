@@ -17,11 +17,14 @@ export interface FlowEdge {
   label?: string;
 }
 
-interface ImportBinding {
+export interface ImportBinding {
   specifier: string;
   local: string;
   // Exported name, 'default', or '*' for namespace / CommonJS module objects
   imported: string;
+  // 1-based line of the import statement
+  line?: number;
+  typeOnly?: boolean;
 }
 
 const NOT_FUNCTION_NAMES = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'with', 'else', 'do', 'try', 'constructor']);
@@ -131,7 +134,11 @@ export class CallSiteExtractor {
     return edges;
   }
 
-  private static parseJsImports(content: string): { bindings: ImportBinding[]; importLines: Set<number> } {
+  /**
+   * Import bindings of a JS/TS file. Type-only bindings bring in no runtime values, so they are skipped
+   * unless `includeTypeOnly` is set (e.g. to find importers broken by a removed interface).
+   */
+  public static parseJsImports(content: string, includeTypeOnly: boolean = false): { bindings: ImportBinding[]; importLines: Set<number> } {
     const bindings: ImportBinding[] = [];
     const importLines = new Set<number>();
     const lineOf = (index: number) => content.slice(0, index).split('\n').length - 1;
@@ -141,24 +148,28 @@ export class CallSiteExtractor {
 
     for (const m of content.matchAll(/(?:^|[\s;])import\s+(type\s+)?([\w$*{}\s,]+?)\s+from\s+['"]([^'"\n]+)['"]/g)) {
       markLines(m.index!, m.index! + m[0].length);
-      if (m[1]) continue; // `import type` brings in no runtime values
+      if (m[1] && !includeTypeOnly) continue;
       const specifier = m[3];
+      const line = lineOf(m.index! + m[0].indexOf('import')) + 1;
+      const statementTypeOnly = Boolean(m[1]);
       let clause = m[2].trim();
 
       const braceStart = clause.indexOf('{');
       if (braceStart >= 0) {
         clause.slice(braceStart + 1, clause.lastIndexOf('}')).split(',').forEach(item => {
-          const trimmed = item.trim();
-          if (!trimmed || trimmed.startsWith('type ')) return;
+          let trimmed = item.trim();
+          const itemTypeOnly = statementTypeOnly || trimmed.startsWith('type ');
+          if (!trimmed || (itemTypeOnly && !includeTypeOnly)) return;
+          trimmed = trimmed.replace(/^type\s+/, '');
           const [imported, local] = trimmed.split(/\s+as\s+/).map(s => s.trim());
-          bindings.push({ specifier, imported, local: local || imported });
+          bindings.push({ specifier, imported, local: local || imported, line, typeOnly: itemTypeOnly });
         });
         clause = clause.slice(0, braceStart);
       }
       clause.split(',').map(s => s.trim()).filter(Boolean).forEach(part => {
         const ns = part.match(/^\*\s+as\s+([\w$]+)$/);
-        if (ns) bindings.push({ specifier, imported: '*', local: ns[1] });
-        else if (/^[\w$]+$/.test(part)) bindings.push({ specifier, imported: 'default', local: part });
+        if (ns) bindings.push({ specifier, imported: '*', local: ns[1], line, typeOnly: statementTypeOnly });
+        else if (/^[\w$]+$/.test(part)) bindings.push({ specifier, imported: 'default', local: part, line, typeOnly: statementTypeOnly });
       });
     }
 

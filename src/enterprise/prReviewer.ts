@@ -1,71 +1,64 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ConventionMiner } from '../miner/conventionMiner.js';
-import { ImpactAnalyzer } from '../graph/impactAnalyzer.js';
-import { GitMiner } from '../git/gitMiner.js';
+import { DiffChecker, DiffCheckReport } from '../review/diffChecker.js';
 
 export interface PRReviewReport {
   repoName: string;
   passed: boolean;
   summaryMarkdown: string;
   violationsCount: number;
+  check: DiffCheckReport;
 }
 
 export class PRReviewer {
-  public static reviewPR(repoPath: string, diffContent?: string): PRReviewReport {
+  /**
+   * Markdown review of a diff (by default the working tree against HEAD, or against `base`).
+   */
+  public static reviewPR(repoPath: string, diffContent?: string, base?: string): PRReviewReport {
     const conventions = ConventionMiner.loadConventions(repoPath);
-    const diff = diffContent || GitMiner.getUncommittedDiff(repoPath);
+    const repoName = conventions?.codebaseName || path.basename(repoPath);
+    const check = DiffChecker.check(repoPath, { diff: diffContent, base });
 
-    const violations: Array<{ rule: string; desc: string; severity: 'error' | 'warning' }> = [];
+    const status = check.status === 'invalid-input'
+      ? '⚠️ COULD NOT REVIEW'
+      : check.status === 'no-changes'
+        ? 'ℹ️ NO CHANGES'
+        : check.passed ? '✅ NO BLOCKING FINDINGS' : '🚨 CHANGES REQUESTED';
 
-    if (conventions) {
-      if (conventions.rules.structural.typeAnnotationRequirement && diff.includes(': any')) {
-        violations.push({
-          rule: 'no-explicit-any',
-          desc: 'Explicit `: any` casting detected. Use `unknown` or typed interfaces.',
-          severity: 'warning'
-        });
-      }
-
-      if (diff.includes('console.log(')) {
-        violations.push({
-          rule: 'no-console-log',
-          desc: 'Leftover `console.log()` statement detected. Prefer structured logger.',
-          severity: 'warning'
-        });
-      }
-
-      if (diff.includes('execSync(') || diff.includes('readFileSync(')) {
-        violations.push({
-          rule: 'no-sync-io-in-pr',
-          desc: 'Synchronous I/O operation detected in PR diff.',
-          severity: 'error'
-        });
-      }
-    }
-
-    const passed = violations.filter(v => v.severity === 'error').length === 0;
+    const findings = check.findings.length === 0
+      ? (check.status === 'invalid-input' ? `- ${check.error}` : '- None of the checks below matched.')
+      : check.findings.map(f => `- [${f.severity.toUpperCase()}] \`${f.filePath}${f.line ? `:${f.line}` : ''}\` **${f.ruleId}**: ${f.message}`).join('\n');
 
     const summaryMarkdown = `## 🤖 Codebase Trainer Automated PR Review Report
 
-**Repository**: \`${conventions?.codebaseName || path.basename(repoPath)}\`
-**Status**: ${passed ? '✅ APPROVED' : '🚨 CHANGES REQUESTED'}
+**Repository**: \`${repoName}\`
+**Status**: ${status}
+**Diff**: ${check.source} (${check.filesChecked.length} file(s), ${check.addedLines} added line(s))
 
-### 📋 Policy & Convention Checks
-${violations.length === 0 ? '✨ All structural conventions and security policies passed!' : violations.map(v => `- [${v.severity.toUpperCase()}] **${v.rule}**: ${v.desc}`).join('\n')}
+### Findings
+${findings}
+
+### Checks run
+${check.checksRun.map(c => `- **${c.id}**: ${c.description}`).join('\n')}
+
+### Not checked (needs human review)
+${check.notCovered.map(n => `- ${n}`).join('\n')}
 
 ---
-*Generated automatically by Codebase Trainer Enterprise Engine.*
+*Generated automatically by Codebase Trainer.*
 `;
 
-    const reportPath = path.join(repoPath, '.codebase', 'pr_review.md');
-    fs.writeFileSync(reportPath, summaryMarkdown, 'utf8');
+    const outDir = path.join(repoPath, '.codebase');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'pr_review.md'), summaryMarkdown, 'utf8');
 
     return {
-      repoName: conventions?.codebaseName || path.basename(repoPath),
-      passed,
+      repoName,
+      passed: check.passed,
       summaryMarkdown,
-      violationsCount: violations.length
+      violationsCount: check.findings.length,
+      check
     };
   }
 }

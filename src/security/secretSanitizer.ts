@@ -77,8 +77,38 @@ export class SecretSanitizer {
     let sanitizedText = content;
     let redactedCount = 0;
     const detectedTypes: string[] = [];
+    const secretRules = this.secretRules();
 
-    const secretRules: Array<{ name: string; pattern: RegExp; replacement: string }> = [
+    for (const rule of secretRules) {
+      if (rule.pattern.test(sanitizedText)) {
+        detectedTypes.push(rule.name);
+        sanitizedText = sanitizedText.replace(rule.pattern, (...args) => {
+          redactedCount++;
+          if (typeof rule.replacement === 'string') {
+            return rule.replacement.replace(/\$1/g, args[1] || '').replace(/\$3/g, args[3] || '');
+          }
+          return '[REDACTED]';
+        });
+      }
+    }
+
+    return {
+      sanitizedText,
+      redactedCount,
+      detectedTypes
+    };
+  }
+
+  /**
+   * Names of the secret types present in a piece of text, without redacting it.
+   */
+  public static detectSecrets(text: string): string[] {
+    return this.secretRules().filter(rule => rule.pattern.test(text)).map(rule => rule.name);
+  }
+
+  // Built fresh per call: the patterns are global regexes whose lastIndex must not leak between inputs
+  private static secretRules(): Array<{ name: string; pattern: RegExp; replacement: string }> {
+    return [
       {
         name: 'Private Key Block',
         pattern: /-----BEGIN\s+(?:RSA|OPENSSH|DSA|EC|PGP)?\s*PRIVATE KEY-----[\s\S]*?-----END\s+(?:RSA|OPENSSH|DSA|EC|PGP)?\s*PRIVATE KEY-----/gi,
@@ -110,24 +140,5 @@ export class SecretSanitizer {
         replacement: '$1://$2:[REDACTED_PASSWORD]@'
       }
     ];
-
-    for (const rule of secretRules) {
-      if (rule.pattern.test(sanitizedText)) {
-        detectedTypes.push(rule.name);
-        sanitizedText = sanitizedText.replace(rule.pattern, (...args) => {
-          redactedCount++;
-          if (typeof rule.replacement === 'string') {
-            return rule.replacement.replace(/\$1/g, args[1] || '').replace(/\$3/g, args[3] || '');
-          }
-          return '[REDACTED]';
-        });
-      }
-    }
-
-    return {
-      sanitizedText,
-      redactedCount,
-      detectedTypes
-    };
   }
 }

@@ -267,7 +267,7 @@ export class ASTExtractor {
     const relPath = path.relative(repoPath, filePath);
     if (relPath.startsWith('..') || path.isAbsolute(relPath)) return false;
     if (!SOURCE_EXTENSIONS.includes(path.extname(filePath).toLowerCase())) return false;
-    const dirs = relPath.split(/[\/]/).slice(0, -1);
+    const dirs = relPath.split(/[\\/]/).slice(0, -1);
     if (dirs.some(d => IGNORED_DIRS.includes(d))) return false;
     if (gitignore.ignores(relPath, false) || SecretSanitizer.isIgnoredFile(filePath, repoPath)) return false;
     try {

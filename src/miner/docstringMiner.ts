@@ -39,8 +39,9 @@ export class DocstringMiner {
       });
     });
 
-    const outPath = path.join(repoPath, '.codebase', 'tech_debt.json');
-    fs.writeFileSync(outPath, JSON.stringify(debtItems, null, 2), 'utf8');
+    const outDir = path.join(repoPath, '.codebase');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'tech_debt.json'), JSON.stringify(debtItems, null, 2), 'utf8');
 
     return debtItems;
   }

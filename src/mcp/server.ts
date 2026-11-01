@@ -23,7 +23,7 @@ import { ModelValidator } from '../validator/modelValidator.js';
 import { DocstringMiner } from '../miner/docstringMiner.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
-import { ReviewResult } from '../types/index.js';
+import { DiffChecker } from '../review/diffChecker.js';
 
 export async function runMCPServer(initialRepoPath: string = process.cwd()) {
   function resolveRepoPath(customPath?: string): string {
@@ -297,10 +297,15 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'generate_pr_review',
-          description: 'Generate automated Markdown PR review report with policy enforcement checks.',
+          description: 'Generate a Markdown PR review of the working tree diff (same checks as check_diff_against_standards), listing findings with file:line, the checks run, and what still needs human review.',
           inputSchema: {
             type: 'object',
-            properties: {},
+            properties: {
+              base: {
+                type: 'string',
+                description: 'Optional git ref to compare against instead of HEAD (e.g. main).',
+              },
+            },
           },
         },
         {
@@ -313,16 +318,19 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'check_diff_against_standards',
-          description: 'Validate code changes or diff against learned codebase conventions.',
+          description: 'Check a git diff (by default the working tree against HEAD, including untracked files) for hardcoded secrets, security risks, removed exports still imported elsewhere, API contract drift, and convention violations. Every finding has a file and line. Also lists what it does not check: a pass is not a full review.',
           inputSchema: {
             type: 'object',
             properties: {
               diff: {
                 type: 'string',
-                description: 'Code snippet or git diff string to review.',
+                description: 'Optional unified diff (output of `git diff`). Omit to read the working tree. Prose or code snippets are rejected.',
+              },
+              base: {
+                type: 'string',
+                description: 'Optional git ref to compare the working tree against instead of HEAD (e.g. main).',
               },
             },
-            required: ['diff'],
           },
         },
         {
@@ -483,7 +491,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     }
 
     if (name === 'generate_pr_review') {
-      const report = PRReviewer.reviewPR(repoPath);
+      const report = PRReviewer.reviewPR(repoPath, undefined, args?.base ? String(args.base) : undefined);
       return {
         content: [
           {
@@ -566,25 +574,17 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     }
 
     if (name === 'check_diff_against_standards') {
-      const diffStr = String(args?.diff || '');
-      const conventions = ConventionMiner.loadConventions(repoPath);
-
-      const violations: ReviewResult['violations'] = [];
-      if (conventions) {
-        if (conventions.rules.structural.typeAnnotationRequirement && diffStr.includes(': any')) {
-          violations.push({
-            ruleId: 'no-explicit-any',
-            message: 'Avoid explicit `any` type casting. Prefer typed interfaces or generics.',
-            severity: 'warning',
-          });
-        }
-      }
+      const report = DiffChecker.check(repoPath, {
+        diff: args?.diff !== undefined ? String(args.diff) : undefined,
+        base: args?.base ? String(args.base) : undefined,
+      });
 
       return {
+        isError: report.status === 'invalid-input',
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ passed: violations.length === 0, violations }, null, 2),
+            text: JSON.stringify(report, null, 2),
           },
         ],
       };
