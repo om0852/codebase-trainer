@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
+import { CodebaseIgnore } from '../extractors/codebaseIgnore.js';
 import { IndexEncryption, EncryptedPayload } from '../storage/encryption.js';
 import { IndexStore } from '../storage/db.js';
 import { PageRankCalculator, PageRankResult } from '../graph/pageRank.js';
@@ -102,7 +103,7 @@ export class SemanticSearchEngine {
 
   public static chunkFile(filePath: string, repoPath?: string): CodeChunk[] {
     if (!fs.existsSync(filePath)) return [];
-    if (repoPath && SecretSanitizer.isIgnoredFile(filePath, repoPath)) return [];
+    if (repoPath && CodebaseIgnore.isIgnoredFile(filePath, repoPath)) return [];
 
     let rawContent = '';
     try {

@@ -51,13 +51,8 @@ export class ContractDriftDetector {
     const calls: ClientCall[] = [];
 
     facts.forEach(fact => {
-      if (!fs.existsSync(fact.filePath)) return;
-      let content = '';
-      try {
-        content = fs.readFileSync(fact.filePath, 'utf8');
-      } catch {
-        return;
-      }
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      if (content === null) return;
 
       const lines = content.split(/\r?\n/);
       const relPath = path.relative(repoPath, fact.filePath);
@@ -126,13 +121,8 @@ export class ContractDriftDetector {
     const endpoints: ServerEndpoint[] = [];
 
     facts.forEach(fact => {
-      if (!fs.existsSync(fact.filePath)) return;
-      let content = '';
-      try {
-        content = fs.readFileSync(fact.filePath, 'utf8');
-      } catch {
-        return;
-      }
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      if (content === null) return;
 
       const lines = content.split(/\r?\n/);
       const relPath = path.relative(repoPath, fact.filePath);

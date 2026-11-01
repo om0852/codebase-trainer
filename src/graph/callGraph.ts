@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ImportResolver } from './importResolver.js';
@@ -36,13 +35,8 @@ export class CallGraphAnalyzer {
     facts.forEach(fact => {
       importsMap[fact.filePath] = fact.importedModules;
 
-      if (!fs.existsSync(fact.filePath)) return;
-      let content = '';
-      try {
-        content = fs.readFileSync(fact.filePath, 'utf8');
-      } catch {
-        return;
-      }
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      if (content === null) return;
 
       const lines = content.split(/\r?\n/);
 

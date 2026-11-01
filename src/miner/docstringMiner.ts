@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTFact } from '../types/index.js';
+import { ASTExtractor } from '../extractors/astExtractor.js';
 
 export interface TechDebtItem {
   filePath: string;
@@ -14,13 +15,8 @@ export class DocstringMiner {
     const debtItems: TechDebtItem[] = [];
 
     facts.forEach(fact => {
-      if (!fs.existsSync(fact.filePath)) return;
-      let content = '';
-      try {
-        content = fs.readFileSync(fact.filePath, 'utf8');
-      } catch {
-        return;
-      }
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      if (content === null) return;
 
       const lines = content.split(/\r?\n/);
       lines.forEach((line, idx) => {

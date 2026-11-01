@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTFact } from '../types/index.js';
-import { SecretSanitizer } from '../security/secretSanitizer.js';
+import { CodebaseIgnore } from './codebaseIgnore.js';
 import { GitIgnoreRules } from './gitignore.js';
 
 // Build output, dependency and cache directories that are never indexed, even without a .gitignore
@@ -24,6 +24,18 @@ export interface SourceFileEntry {
 }
 
 export class ASTExtractor {
+  /**
+   * Reads a source file as UTF-8, or returns null when it is missing or unreadable.
+   */
+  public static readSourceFile(filePath: string): string | null {
+    if (!fs.existsSync(filePath)) return null;
+    try {
+      return fs.readFileSync(filePath, 'utf8');
+    } catch {
+      return null;
+    }
+  }
+
   public static extractFileFacts(filePath: string): ASTFact | null {
     if (!fs.existsSync(filePath)) return null;
 
@@ -246,7 +258,7 @@ export class ASTExtractor {
           }
         } else if (entry.isFile()) {
           if (!SOURCE_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())) continue;
-          if (gitignore.ignores(relPath, false) || SecretSanitizer.isIgnoredFile(fullPath, dirPath)) continue;
+          if (gitignore.ignores(relPath, false) || CodebaseIgnore.isIgnoredFile(fullPath, dirPath)) continue;
           try {
             const stats = fs.statSync(fullPath);
             if (stats.size > MAX_FILE_BYTES) continue;
@@ -271,7 +283,7 @@ export class ASTExtractor {
     if (!SOURCE_EXTENSIONS.includes(path.extname(filePath).toLowerCase())) return false;
     const dirs = relPath.split(/[\\/]/).slice(0, -1);
     if (dirs.some(d => IGNORED_DIRS.includes(d))) return false;
-    if (gitignore.ignores(relPath, false) || SecretSanitizer.isIgnoredFile(filePath, repoPath)) return false;
+    if (gitignore.ignores(relPath, false) || CodebaseIgnore.isIgnoredFile(filePath, repoPath)) return false;
     try {
       return fs.statSync(filePath).size <= MAX_FILE_BYTES;
     } catch {
