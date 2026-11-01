@@ -1,0 +1,158 @@
+repo: express-realworld
+questions:
+  - id: ex-locate-01
+    type: locate
+    split: dev
+    question: "how does following another author work"
+    files: [src/app/routes/profile/profile.service.ts]
+    note: "followUser connects the 'followedBy' relation on the target user via prisma.user.update"
+  - id: ex-locate-02
+    type: locate
+    split: dev
+    question: "where are incoming JWTs read from the Authorization header and verified"
+    files: [src/app/routes/auth/auth.ts]
+    note: "getTokenFromHeaders accepts 'Token' or 'Bearer' prefix; auth.required/auth.optional wrap express-jwt with HS256"
+  - id: ex-locate-03
+    type: locate
+    split: dev
+    question: "where do we sign the token that gets returned after login, and how long is it valid"
+    files: [src/app/routes/auth/token.utils.ts]
+    note: "generateToken calls jwt.sign({ user: { id } }, JWT_SECRET, { expiresIn: '60d' })"
+  - id: ex-locate-04
+    type: locate
+    split: dev
+    question: "how are passwords hashed when someone signs up"
+    files: [src/app/routes/auth/auth.service.ts]
+    note: "createUser calls bcrypt.hash(password, 10) before prisma.user.create"
+  - id: ex-locate-05
+    type: locate
+    split: holdout
+    question: "where do we reject a signup because the email or username is already taken"
+    files: [src/app/routes/auth/auth.service.ts]
+    note: "checkUserUniqueness throws HttpException(422) with 'has already been taken' errors"
+  - id: ex-locate-06
+    type: locate
+    split: dev
+    question: "how is a user's password checked when they log in"
+    files: [src/app/routes/auth/auth.service.ts]
+    note: "login uses bcrypt.compare(password, user.password) and throws 403 on mismatch"
+  - id: ex-locate-07
+    type: locate
+    split: dev
+    question: "how are thrown errors turned into HTTP status codes and JSON responses"
+    files: [src/main.ts, src/app/models/http-exception.model.ts]
+    note: "Global error middleware in main.ts maps UnauthorizedError->401, err.errorCode->status, else 500; HttpException carries errorCode"
+  - id: ex-locate-08
+    type: locate
+    split: holdout
+    question: "where is the database client created and kept as a single shared instance"
+    files: [src/prisma/prisma-client.ts]
+    note: "global.prisma || new PrismaClient(), cached on global in development"
+  - id: ex-locate-09
+    type: locate
+    split: dev
+    question: "how does the article list handle limit and offset paging"
+    files: [src/app/routes/article/article.service.ts]
+    note: "getArticles uses skip: Number(query.offset) || 0 and take: Number(query.limit) || 10, plus prisma.article.count"
+  - id: ex-locate-10
+    type: locate
+    split: dev
+    question: "how are articles filtered by tag, author name, or who liked them"
+    files: [src/app/routes/article/article.service.ts]
+    note: "buildFindAllQuery builds tagList/author/favoritedBy 'some' conditions from query params"
+  - id: ex-locate-11
+    type: locate
+    split: holdout
+    question: "how is the URL-friendly identifier for a post generated from its title"
+    files: [src/app/routes/article/article.service.ts]
+    note: "createArticle/updateArticle build slug as `${slugify(title)}-${id}`"
+  - id: ex-locate-12
+    type: locate
+    split: dev
+    question: "how does the home feed show only posts from people I follow"
+    files: [src/app/routes/article/article.service.ts, src/app/routes/article/article.controller.ts]
+    note: "getFeed filters author.followedBy some { id }; GET /articles/feed requires auth"
+  - id: ex-locate-13
+    type: locate
+    split: dev
+    question: "what stops a user from editing or deleting someone else's article"
+    files: [src/app/routes/article/article.service.ts]
+    note: "updateArticle and deleteArticle compare author id and throw HttpException(403)"
+  - id: ex-locate-14
+    type: locate
+    split: dev
+    question: "how is the popular tags list computed"
+    files: [src/app/routes/tag/tag.service.ts]
+    note: "getTags orders tags by articles _count desc with take: 10, limited to demo or current-user authors"
+  - id: ex-locate-15
+    type: locate
+    split: holdout
+    question: "where is the favorited flag and favorites count added to an article in API responses"
+    files: [src/app/routes/article/article.mapper.ts]
+    note: "articleMapper sets favorited via favoritedBy.some(id) and favoritesCount = favoritedBy.length"
+  - id: ex-locate-16
+    type: locate
+    split: dev
+    question: "how do we work out whether the viewer is following a given profile"
+    files: [src/app/routes/profile/profile.utils.ts, src/app/routes/article/author.mapper.ts]
+    note: "profileMapper/authorMapper compute following = followedBy.some(u => u.id === id)"
+  - id: ex-locate-17
+    type: locate
+    split: dev
+    question: "where is all the API routing mounted under the /api prefix"
+    files: [src/app/routes/routes.ts]
+    note: "Router().use('/api', api) composing tag, article, profile, auth controllers"
+  - id: ex-locate-18
+    type: locate
+    split: holdout
+    question: "how can a comment be removed, and who is allowed to do it"
+    files: [src/app/routes/article/article.service.ts, src/app/routes/article/article.controller.ts]
+    note: "deleteComment throws 404 if missing and 403 if comment author differs; DELETE /articles/:slug/comments/:id"
+  - id: ex-locate-19
+    type: locate
+    split: dev
+    question: "where are the database tables and relationships between users, posts and comments declared"
+    files: [src/prisma/schema.prisma]
+    note: "models Article, Comment, Tag, User with UserArticles, UserFavorites, UserFollows relations"
+  - id: ex-locate-20
+    type: locate
+    split: dev
+    question: "how is fake demo data generated to fill the database"
+    files: [src/prisma/seed.ts]
+    note: "generateUser/generateArticle/generateComment with main(); wired via package.json prisma.seed"
+  - id: ex-feature-01
+    type: feature
+    split: dev
+    question: "everything involved in user registration and login, from the route to the stored user record"
+    files: [src/app/routes/auth/auth.controller.ts, src/app/routes/auth/auth.service.ts, src/app/routes/auth/token.utils.ts, src/app/routes/auth/register-input.model.ts, src/app/routes/auth/registered-user.model.ts, src/prisma/schema.prisma, src/app/models/http-exception.model.ts]
+    note: "POST /users and /users/login -> createUser/login (bcrypt, checkUserUniqueness) -> generateToken -> User model"
+  - id: ex-feature-02
+    type: feature
+    split: holdout
+    question: "everything involved in viewing profiles and following/unfollowing users"
+    files: [src/app/routes/profile/profile.controller.ts, src/app/routes/profile/profile.service.ts, src/app/routes/profile/profile.utils.ts, src/app/routes/profile/profile.model.ts, src/app/routes/auth/auth.ts, src/prisma/schema.prisma]
+    note: "/profiles/:username(/follow) routes with auth.optional/required -> getProfile/followUser/unfollowUser -> profileMapper; User.followedBy/following 'UserFollows'"
+  - id: ex-feature-03
+    type: feature
+    split: dev
+    question: "everything I need to touch to change how articles are created, updated and deleted"
+    files: [src/app/routes/article/article.controller.ts, src/app/routes/article/article.service.ts, src/app/routes/article/article.mapper.ts, src/app/routes/article/author.mapper.ts, src/app/routes/article/article.model.ts, src/app/routes/auth/auth.ts, src/prisma/schema.prisma]
+    note: "POST/PUT/DELETE /articles(/:slug) -> createArticle/updateArticle/deleteArticle (slugify, 403 ownership) -> articleMapper; Article model"
+  - id: ex-feature-04
+    type: feature
+    split: dev
+    question: "end-to-end flow of favoriting and unfavoriting an article"
+    files: [src/app/routes/article/article.controller.ts, src/app/routes/article/article.service.ts, src/app/routes/article/article.mapper.ts, src/app/routes/auth/auth.ts, src/prisma/schema.prisma]
+    note: "POST/DELETE /articles/:slug/favorite -> favoriteArticle/unfavoriteArticle -> articleMapper favorited/favoritesCount; UserFavorites relation"
+  - id: ex-feature-05
+    type: feature
+    split: dev
+    question: "all the pieces behind comments on articles: listing, adding, deleting"
+    files: [src/app/routes/article/article.controller.ts, src/app/routes/article/article.service.ts, src/app/routes/article/comment.model.ts, src/app/routes/profile/profile.utils.ts, src/app/routes/auth/auth.ts, src/prisma/schema.prisma]
+    note: "/articles/:slug/comments routes -> getCommentsByArticle/addComment/deleteComment (profileMapper for author) -> Comment model"
+  - id: ex-feature-06
+    type: feature
+    split: holdout
+    question: "everything involved in tags: how they are attached to articles and served by the tags endpoint"
+    files: [src/app/routes/tag/tag.controller.ts, src/app/routes/tag/tag.service.ts, src/app/routes/tag/tag.model.ts, src/app/routes/article/article.service.ts, src/app/routes/article/article.mapper.ts, src/prisma/schema.prisma]
+    note: "GET /tags -> getTags; createArticle/updateArticle connectOrCreate tagList and disconnectArticlesTags; Tag<->Article implicit m2m"

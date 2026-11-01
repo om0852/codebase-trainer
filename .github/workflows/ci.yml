@@ -8,18 +8,20 @@ on:
 
 jobs:
   build-and-test:
-    name: Build, Test & Security Audit
-    runs-on: ubuntu-latest
+    name: Build, Test & Security Audit (${{ matrix.os }}, Node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       # Required to upload SARIF results to GitHub Code Scanning
       security-events: write
 
     strategy:
-      # Report every Node version's result instead of cancelling the others on the first failure
+      # Report every combination's result instead of cancelling the others on the first failure
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Node 20 reached end of life in April 2026
+        node-version: [22.x, 24.x]
 
     steps:
       - name: 📥 Checkout Repository
@@ -37,8 +39,8 @@ jobs:
       - name: ⚙️ Compile TypeScript
         run: npm run build
 
-      - name: 🧪 Run Unit & Algorithm Test Suite
-        run: npx tsx tests/unit.test.ts
+      - name: 🧪 Run Test Suite
+        run: npm test
 
       - name: 📡 Check Client-to-Server API Contract Drift
         run: node dist/cli/index.js drift
@@ -52,10 +54,43 @@ jobs:
       # One upload per run: Code Scanning rejects several uploads under the same category
       - name: 📤 Upload SARIF Security Artifact
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && matrix.node-version == '22.x' && hashFiles('.codebase/results.sarif') != ''
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x' && hashFiles('.codebase/results.sarif') != ''
         with:
           sarif_file: .codebase/results.sarif
           category: codebase-trainer-security
+
+  benchmark:
+    name: Retrieval Benchmark (regression check)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 📚 Clone Benchmark Corpus (pinned commits)
+        run: npm run bench:setup
+
+      # Dev questions only; the holdout split is kept for release checks so day-to-day tuning cannot overfit it
+      - name: 📏 Run Benchmark Against Baseline
+        run: npm run bench -- --split=dev --baseline=bench/baseline-dev.json
+
+      - name: 📤 Upload Benchmark Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: bench/results/
 
   docker-build:
     name: Container Image Build & Push

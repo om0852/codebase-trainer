@@ -1,0 +1,1705 @@
+{
+  "label": "1.4.0",
+  "date": "2026-11-01T18:30:30.523Z",
+  "split": "all",
+  "repos": {
+    "taxonomy": {
+      "files": 139,
+      "trackedFiles": 169,
+      "notIndexed": [
+        "prisma/schema.prisma"
+      ],
+      "index": {
+        "buildMs": 172,
+        "bytes": 2108882
+      },
+      "latency": {
+        "p50": 77,
+        "p95": 148
+      },
+      "tool": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.35,
+          "hitAt5": 0.7,
+          "mrr": 0.531,
+          "medianTokens": 1281,
+          "answeredAt20": 0.95
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.36,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.25,
+          "hitAt5": 0.5,
+          "mrr": 0.379,
+          "medianTokens": 3129,
+          "answeredAt20": 0.85
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.263,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "tx-locate-01",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 1281
+          },
+          {
+            "id": "tx-locate-02",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 111
+          },
+          {
+            "id": "tx-locate-03",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 673
+          },
+          {
+            "id": "tx-locate-04",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 517
+          },
+          {
+            "id": "tx-locate-05",
+            "type": "locate",
+            "firstHit": 5,
+            "recallAt10": 1,
+            "tokensToAnswer": 3324
+          },
+          {
+            "id": "tx-locate-06",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1667
+          },
+          {
+            "id": "tx-locate-07",
+            "type": "locate",
+            "firstHit": 7,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 2985
+          },
+          {
+            "id": "tx-locate-08",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 1940
+          },
+          {
+            "id": "tx-locate-09",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1475
+          },
+          {
+            "id": "tx-locate-10",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 1273
+          },
+          {
+            "id": "tx-locate-11",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-locate-12",
+            "type": "locate",
+            "firstHit": 10,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 5228
+          },
+          {
+            "id": "tx-locate-13",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 2967
+          },
+          {
+            "id": "tx-locate-14",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 993
+          },
+          {
+            "id": "tx-locate-15",
+            "type": "locate",
+            "firstHit": 9,
+            "recallAt10": 1,
+            "tokensToAnswer": 4799
+          },
+          {
+            "id": "tx-locate-16",
+            "type": "locate",
+            "firstHit": 15,
+            "recallAt10": 0,
+            "tokensToAnswer": 9856
+          },
+          {
+            "id": "tx-locate-17",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1083
+          },
+          {
+            "id": "tx-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 508
+          },
+          {
+            "id": "tx-locate-19",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 146
+          },
+          {
+            "id": "tx-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 424
+          },
+          {
+            "id": "tx-feature-01",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.625,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.286,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.167,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-06",
+            "type": "feature",
+            "firstHit": 6,
+            "recallAt10": 0.25,
+            "tokensToAnswer": null
+          }
+        ],
+        "grep": [
+          {
+            "id": "tx-locate-01",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1258
+          },
+          {
+            "id": "tx-locate-02",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 78340
+          },
+          {
+            "id": "tx-locate-03",
+            "type": "locate",
+            "firstHit": 8,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 20702
+          },
+          {
+            "id": "tx-locate-04",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 517
+          },
+          {
+            "id": "tx-locate-05",
+            "type": "locate",
+            "firstHit": 11,
+            "recallAt10": 0,
+            "tokensToAnswer": 22423
+          },
+          {
+            "id": "tx-locate-06",
+            "type": "locate",
+            "firstHit": 14,
+            "recallAt10": 0,
+            "tokensToAnswer": 104159
+          },
+          {
+            "id": "tx-locate-07",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 722
+          },
+          {
+            "id": "tx-locate-08",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 90597
+          },
+          {
+            "id": "tx-locate-09",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-locate-10",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 1273
+          },
+          {
+            "id": "tx-locate-11",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-locate-12",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 3129
+          },
+          {
+            "id": "tx-locate-13",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 102447
+          },
+          {
+            "id": "tx-locate-14",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 993
+          },
+          {
+            "id": "tx-locate-15",
+            "type": "locate",
+            "firstHit": 10,
+            "recallAt10": 1,
+            "tokensToAnswer": 84602
+          },
+          {
+            "id": "tx-locate-16",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-locate-17",
+            "type": "locate",
+            "firstHit": 5,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 2727
+          },
+          {
+            "id": "tx-locate-18",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1397
+          },
+          {
+            "id": "tx-locate-19",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 146
+          },
+          {
+            "id": "tx-locate-20",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 6222
+          },
+          {
+            "id": "tx-feature-01",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-02",
+            "type": "feature",
+            "firstHit": 8,
+            "recallAt10": 0.167,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.167,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.286,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.125,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "express-realworld": {
+      "files": 57,
+      "trackedFiles": 64,
+      "notIndexed": [
+        "src/prisma/schema.prisma"
+      ],
+      "index": {
+        "buildMs": 154,
+        "bytes": 3388502
+      },
+      "latency": {
+        "p50": 82,
+        "p95": 111
+      },
+      "tool": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.5,
+          "hitAt5": 0.85,
+          "mrr": 0.644,
+          "medianTokens": 1526,
+          "answeredAt20": 0.95
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.525,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.4,
+          "hitAt5": 0.75,
+          "mrr": 0.548,
+          "medianTokens": 3345,
+          "answeredAt20": 0.95
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.398,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "ex-locate-01",
+            "type": "locate",
+            "firstHit": 8,
+            "recallAt10": 1,
+            "tokensToAnswer": 7530
+          },
+          {
+            "id": "ex-locate-02",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 201
+          },
+          {
+            "id": "ex-locate-03",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 1529
+          },
+          {
+            "id": "ex-locate-04",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1062
+          },
+          {
+            "id": "ex-locate-05",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1062
+          },
+          {
+            "id": "ex-locate-06",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1062
+          },
+          {
+            "id": "ex-locate-07",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 331
+          },
+          {
+            "id": "ex-locate-08",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 129
+          },
+          {
+            "id": "ex-locate-09",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4844
+          },
+          {
+            "id": "ex-locate-10",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-11",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 100423
+          },
+          {
+            "id": "ex-locate-12",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1499
+          },
+          {
+            "id": "ex-locate-13",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 6148
+          },
+          {
+            "id": "ex-locate-14",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 3660
+          },
+          {
+            "id": "ex-locate-15",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 4978
+          },
+          {
+            "id": "ex-locate-16",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 813
+          },
+          {
+            "id": "ex-locate-17",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 111
+          },
+          {
+            "id": "ex-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-19",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-locate-20",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1526
+          },
+          {
+            "id": "ex-feature-01",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.286,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-03",
+            "type": "feature",
+            "firstHit": 3,
+            "recallAt10": 0.429,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.6,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-06",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": null
+          }
+        ],
+        "grep": [
+          {
+            "id": "ex-locate-01",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-locate-02",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 201
+          },
+          {
+            "id": "ex-locate-03",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 97087
+          },
+          {
+            "id": "ex-locate-04",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1062
+          },
+          {
+            "id": "ex-locate-05",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 2723
+          },
+          {
+            "id": "ex-locate-06",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 2723
+          },
+          {
+            "id": "ex-locate-07",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 96138
+          },
+          {
+            "id": "ex-locate-08",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 4386
+          },
+          {
+            "id": "ex-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-10",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-11",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 99574
+          },
+          {
+            "id": "ex-locate-12",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-13",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-14",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 99520
+          },
+          {
+            "id": "ex-locate-15",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 4437
+          },
+          {
+            "id": "ex-locate-16",
+            "type": "locate",
+            "firstHit": 7,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 7848
+          },
+          {
+            "id": "ex-locate-17",
+            "type": "locate",
+            "firstHit": 7,
+            "recallAt10": 1,
+            "tokensToAnswer": 96124
+          },
+          {
+            "id": "ex-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-locate-19",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 422
+          },
+          {
+            "id": "ex-locate-20",
+            "type": "locate",
+            "firstHit": 10,
+            "recallAt10": 1,
+            "tokensToAnswer": 103110
+          },
+          {
+            "id": "ex-feature-01",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.286,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-02",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.571,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.2,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "nestjs-realworld": {
+      "files": 43,
+      "trackedFiles": 118,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 126,
+        "bytes": 3184344
+      },
+      "latency": {
+        "p50": 66,
+        "p95": 82
+      },
+      "tool": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.85,
+          "hitAt5": 0.9,
+          "mrr": 0.888,
+          "medianTokens": 937,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.755,
+          "fullyCoveredAt20": 0.5,
+          "medianTokens": 6925
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.2,
+          "hitAt5": 0.65,
+          "mrr": 0.402,
+          "medianTokens": 2101,
+          "answeredAt20": 0.8
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.503,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "ne-locate-01",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 192
+          },
+          {
+            "id": "ne-locate-02",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 212
+          },
+          {
+            "id": "ne-locate-03",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 937
+          },
+          {
+            "id": "ne-locate-04",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1129
+          },
+          {
+            "id": "ne-locate-05",
+            "type": "locate",
+            "firstHit": 11,
+            "recallAt10": 0,
+            "tokensToAnswer": 4008
+          },
+          {
+            "id": "ne-locate-06",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 191
+          },
+          {
+            "id": "ne-locate-07",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-08",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-10",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 341
+          },
+          {
+            "id": "ne-locate-11",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 937
+          },
+          {
+            "id": "ne-locate-12",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 173
+          },
+          {
+            "id": "ne-locate-13",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 937
+          },
+          {
+            "id": "ne-locate-14",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 3415
+          },
+          {
+            "id": "ne-locate-15",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 865
+          },
+          {
+            "id": "ne-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-17",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 116
+          },
+          {
+            "id": "ne-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 180
+          },
+          {
+            "id": "ne-locate-19",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 264
+          },
+          {
+            "id": "ne-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-feature-01",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.625,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.857,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.714,
+            "tokensToAnswer": 105843
+          },
+          {
+            "id": "ne-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.833,
+            "tokensToAnswer": 6252
+          },
+          {
+            "id": "ne-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.833,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-06",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": 6925
+          }
+        ],
+        "grep": [
+          {
+            "id": "ne-locate-01",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 2758
+          },
+          {
+            "id": "ne-locate-02",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 4889
+          },
+          {
+            "id": "ne-locate-03",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 99592
+          },
+          {
+            "id": "ne-locate-04",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 102213
+          },
+          {
+            "id": "ne-locate-05",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-06",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-07",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-08",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-10",
+            "type": "locate",
+            "firstHit": 8,
+            "recallAt10": 1,
+            "tokensToAnswer": 165498
+          },
+          {
+            "id": "ne-locate-11",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 937
+          },
+          {
+            "id": "ne-locate-12",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 1827
+          },
+          {
+            "id": "ne-locate-13",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-14",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 6905
+          },
+          {
+            "id": "ne-locate-15",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 2375
+          },
+          {
+            "id": "ne-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-17",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 1036
+          },
+          {
+            "id": "ne-locate-18",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 583
+          },
+          {
+            "id": "ne-locate-19",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1078
+          },
+          {
+            "id": "ne-locate-20",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3476
+          },
+          {
+            "id": "ne-feature-01",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.375,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.571,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-03",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.571,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "t3-turbo": {
+      "files": 116,
+      "trackedFiles": 136,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 125,
+        "bytes": 1167429
+      },
+      "latency": {
+        "p50": 63,
+        "p95": 150
+      },
+      "tool": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.55,
+          "hitAt5": 0.85,
+          "mrr": 0.681,
+          "medianTokens": 545,
+          "answeredAt20": 0.95
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.525,
+          "fullyCoveredAt20": 0.167,
+          "medianTokens": 8399
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 20,
+          "hitAt1": 0.1,
+          "hitAt5": 0.7,
+          "mrr": 0.392,
+          "medianTokens": 4340,
+          "answeredAt20": 0.95
+        },
+        "feature": {
+          "count": 6,
+          "recallAt10": 0.421,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "t3-locate-01",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-locate-02",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 952
+          },
+          {
+            "id": "t3-locate-03",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 952
+          },
+          {
+            "id": "t3-locate-04",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 240
+          },
+          {
+            "id": "t3-locate-05",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 186
+          },
+          {
+            "id": "t3-locate-06",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 56
+          },
+          {
+            "id": "t3-locate-07",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 753
+          },
+          {
+            "id": "t3-locate-08",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 384
+          },
+          {
+            "id": "t3-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 345
+          },
+          {
+            "id": "t3-locate-10",
+            "type": "locate",
+            "firstHit": 9,
+            "recallAt10": 1,
+            "tokensToAnswer": 4211
+          },
+          {
+            "id": "t3-locate-11",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 938
+          },
+          {
+            "id": "t3-locate-12",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 449
+          },
+          {
+            "id": "t3-locate-13",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 311
+          },
+          {
+            "id": "t3-locate-14",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 545
+          },
+          {
+            "id": "t3-locate-15",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 348
+          },
+          {
+            "id": "t3-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1330
+          },
+          {
+            "id": "t3-locate-17",
+            "type": "locate",
+            "firstHit": 10,
+            "recallAt10": 1,
+            "tokensToAnswer": 5122
+          },
+          {
+            "id": "t3-locate-18",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 1195
+          },
+          {
+            "id": "t3-locate-19",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 974
+          },
+          {
+            "id": "t3-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 154
+          },
+          {
+            "id": "t3-feature-01",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": 8399
+          },
+          {
+            "id": "t3-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.714,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-04",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.6,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-05",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.667,
+            "tokensToAnswer": null
+          }
+        ],
+        "grep": [
+          {
+            "id": "t3-locate-01",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-locate-02",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4642
+          },
+          {
+            "id": "t3-locate-03",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 952
+          },
+          {
+            "id": "t3-locate-04",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 12210
+          },
+          {
+            "id": "t3-locate-05",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3876
+          },
+          {
+            "id": "t3-locate-06",
+            "type": "locate",
+            "firstHit": 6,
+            "recallAt10": 1,
+            "tokensToAnswer": 4740
+          },
+          {
+            "id": "t3-locate-07",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 4476
+          },
+          {
+            "id": "t3-locate-08",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4074
+          },
+          {
+            "id": "t3-locate-09",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 6285
+          },
+          {
+            "id": "t3-locate-10",
+            "type": "locate",
+            "firstHit": 16,
+            "recallAt10": 0,
+            "tokensToAnswer": 10356
+          },
+          {
+            "id": "t3-locate-11",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4179
+          },
+          {
+            "id": "t3-locate-12",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 752
+          },
+          {
+            "id": "t3-locate-13",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4001
+          },
+          {
+            "id": "t3-locate-14",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 3974
+          },
+          {
+            "id": "t3-locate-15",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 4340
+          },
+          {
+            "id": "t3-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1330
+          },
+          {
+            "id": "t3-locate-17",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 9971
+          },
+          {
+            "id": "t3-locate-18",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4340
+          },
+          {
+            "id": "t3-locate-19",
+            "type": "locate",
+            "firstHit": 8,
+            "recallAt10": 1,
+            "tokensToAnswer": 5921
+          },
+          {
+            "id": "t3-locate-20",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3844
+          },
+          {
+            "id": "t3-feature-01",
+            "type": "feature",
+            "firstHit": 4,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-02",
+            "type": "feature",
+            "firstHit": 4,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-03",
+            "type": "feature",
+            "firstHit": 5,
+            "recallAt10": 0.429,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-04",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.6,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-05",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-06",
+            "type": "feature",
+            "firstHit": 3,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    }
+  },
+  "overall": {
+    "tool": {
+      "locate": {
+        "count": 80,
+        "hitAt1": 0.563,
+        "hitAt5": 0.825,
+        "mrr": 0.686,
+        "medianTokens": 993,
+        "answeredAt20": 0.963
+      },
+      "feature": {
+        "count": 24,
+        "recallAt10": 0.541,
+        "fullyCoveredAt20": 0.167,
+        "medianTokens": 7662
+      }
+    },
+    "grep": {
+      "locate": {
+        "count": 80,
+        "hitAt1": 0.237,
+        "hitAt5": 0.65,
+        "mrr": 0.43,
+        "medianTokens": 3974,
+        "answeredAt20": 0.887
+      },
+      "feature": {
+        "count": 24,
+        "recallAt10": 0.396,
+        "fullyCoveredAt20": 0,
+        "medianTokens": null
+      }
+    }
+  }
+}

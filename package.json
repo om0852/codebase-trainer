@@ -14,7 +14,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli/index.js mcp",
-    "test": "npx tsx tests/unit.test.ts",
+    "test": "tsx --test \"tests/**/*.test.ts\"",
+    "bench": "tsx bench/run.ts",
+    "bench:setup": "tsx bench/corpus.ts",
     "security": "node dist/cli/index.js security",
     "audit": "node dist/cli/index.js audit",
     "ci": "node dist/cli/index.js ci",

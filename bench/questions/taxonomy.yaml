@@ -1,0 +1,158 @@
+repo: taxonomy
+questions:
+  - id: tx-locate-01
+    type: locate
+    split: dev
+    question: "how does a signed-in user cancel or manage their paid plan"
+    files: [app/api/users/stripe/route.ts, components/billing-form.tsx]
+    note: "GET handler calls stripe.billingPortal.sessions.create when subscriptionPlan.isPro; BillingForm fetches /api/users/stripe"
+  - id: tx-locate-02
+    type: locate
+    split: dev
+    question: "where do we decide if someone is on the pro tier or the free tier"
+    files: [lib/subscription.ts, config/subscriptions.ts]
+    note: "getUserSubscriptionPlan computes isPro from stripePriceId and stripeCurrentPeriodEnd + 1 day grace; freePlan/proPlan constants"
+  - id: tx-locate-03
+    type: locate
+    split: dev
+    question: "where is the limit that stops free users from writing more than three posts"
+    files: [app/api/posts/route.ts, lib/exceptions.ts]
+    note: "POST checks db.post.count >= 3 for non-pro users and throws RequiresProPlanError, returned as 402"
+  - id: tx-locate-04
+    type: locate
+    split: dev
+    question: "how do we keep the user's subscription in sync after Stripe charges them"
+    files: [app/api/webhooks/stripe/route.ts]
+    note: "Handles checkout.session.completed and invoice.payment_succeeded, updating stripePriceId and stripeCurrentPeriodEnd via db.user.update"
+  - id: tx-locate-05
+    type: locate
+    split: holdout
+    question: "how are logged-out visitors bounced away from the dashboard and editor pages"
+    files: [middleware.ts]
+    note: "withAuth middleware redirects to /login?from=... when no token; matcher covers /dashboard/:path* and /editor/:path*"
+  - id: tx-locate-06
+    type: locate
+    split: dev
+    question: "where is the magic link login email sent"
+    files: [lib/auth.ts]
+    note: "EmailProvider.sendVerificationRequest uses postmarkClient.sendEmailWithTemplate with sign-in vs activation template"
+  - id: tx-locate-07
+    type: locate
+    split: dev
+    question: "where is GitHub OAuth configured and how does the session get the user id"
+    files: [lib/auth.ts, types/next-auth.d.ts]
+    note: "authOptions.providers includes GitHubProvider; jwt/session callbacks set session.user.id from dbUser"
+  - id: tx-locate-08
+    type: locate
+    split: dev
+    question: "how do I get the current logged-in user inside a server component"
+    files: [lib/session.ts]
+    note: "getCurrentUser wraps getServerSession(authOptions) and returns session.user"
+  - id: tx-locate-09
+    type: locate
+    split: holdout
+    question: "what checks that a person can only edit or delete their own posts"
+    files: ["app/api/posts/[postId]/route.ts"]
+    note: "verifyCurrentUserHasAccessToPost counts posts with id and authorId = session user id, used by DELETE and PATCH"
+  - id: tx-locate-10
+    type: locate
+    split: dev
+    question: "where does the editor save the block content of a post"
+    files: [components/editor.tsx, "app/api/posts/[postId]/route.ts"]
+    note: "Editor onSubmit calls ref.current.save() then PATCH /api/posts/{id}; route updates title and content"
+  - id: tx-locate-11
+    type: locate
+    split: dev
+    question: "where is the request body validated when updating a post"
+    files: [lib/validations/post.ts]
+    note: "postPatchSchema zod schema used by editor form and PATCH route"
+  - id: tx-locate-12
+    type: locate
+    split: dev
+    question: "how does a user rename themselves in settings"
+    files: [components/user-name-form.tsx, "app/api/users/[userId]/route.ts"]
+    note: "UserNameForm PATCHes /api/users/{id}; route validates userNameSchema and updates db.user name"
+  - id: tx-locate-13
+    type: locate
+    split: holdout
+    question: "how are social share preview images generated dynamically"
+    files: [app/api/og/route.tsx, lib/validations/og.ts]
+    note: "Edge GET handler builds ImageResponse from ogImageSchema params (heading, type, mode)"
+  - id: tx-locate-14
+    type: locate
+    split: dev
+    question: "where are the documentation, guides and blog content types defined"
+    files: [contentlayer.config.js]
+    note: "defineDocumentType for Doc, Guide, Post, Author, Page with filePathPattern and computedFields"
+  - id: tx-locate-15
+    type: locate
+    split: dev
+    question: "where is the database client created and reused across hot reloads"
+    files: [lib/db.ts]
+    note: "Stores PrismaClient on global.cachedPrisma in development"
+  - id: tx-locate-16
+    type: locate
+    split: dev
+    question: "where are required environment variables declared and validated"
+    files: [env.mjs]
+    note: "createEnv from @t3-oss/env-nextjs with server and client schemas"
+  - id: tx-locate-17
+    type: locate
+    split: holdout
+    question: "how is the table of contents for a docs page built"
+    files: [lib/toc.ts, components/toc.tsx]
+    note: "getTableOfContents parses doc.body.raw; DashboardTableOfContents renders it in docs/guides pages"
+  - id: tx-locate-18
+    type: locate
+    split: dev
+    question: "where is the log out button in the user dropdown menu"
+    files: [components/user-account-nav.tsx]
+    note: "UserAccountNav dropdown item calls signOut from next-auth/react"
+  - id: tx-locate-19
+    type: locate
+    split: dev
+    question: "where are the dashboard sidebar links like Posts, Billing and Settings configured"
+    files: [config/dashboard.ts, components/nav.tsx]
+    note: "dashboardConfig.sidebarNav entries rendered by DashboardNav"
+  - id: tx-locate-20
+    type: locate
+    split: holdout
+    question: "how do the previous and next links at the bottom of a docs page work"
+    files: [components/pager.tsx, config/docs.ts]
+    note: "getPagerForDoc flattens docsConfig.sidebarNav to find neighbours; DocsPager renders the links"
+  - id: tx-feature-01
+    type: feature
+    split: dev
+    question: "everything involved in upgrading to the pro plan with Stripe and keeping it in sync"
+    files: ["app/(dashboard)/dashboard/billing/page.tsx", components/billing-form.tsx, app/api/users/stripe/route.ts, app/api/webhooks/stripe/route.ts, lib/subscription.ts, lib/stripe.ts, config/subscriptions.ts, prisma/schema.prisma]
+    note: "Billing page -> BillingForm fetch /api/users/stripe (checkout/portal) -> webhook updates User stripe* fields in schema; plan derived in getUserSubscriptionPlan"
+  - id: tx-feature-02
+    type: feature
+    split: dev
+    question: "everything I need to touch to change how posts are created from the dashboard"
+    files: ["app/(dashboard)/dashboard/page.tsx", components/post-create-button.tsx, app/api/posts/route.ts, lib/subscription.ts, lib/exceptions.ts, prisma/schema.prisma]
+    note: "PostCreateButton POSTs /api/posts which enforces free-plan limit via getUserSubscriptionPlan/RequiresProPlanError and db.post.create on Post model"
+  - id: tx-feature-03
+    type: feature
+    split: holdout
+    question: "full flow for editing and saving a post in the block editor"
+    files: ["app/(editor)/editor/[postId]/page.tsx", components/editor.tsx, "app/api/posts/[postId]/route.ts", lib/validations/post.ts, lib/session.ts, prisma/schema.prisma]
+    note: "Editor page loads post for getCurrentUser, Editor component saves EditorJS blocks via PATCH with postPatchSchema; Post.content is Json"
+  - id: tx-feature-04
+    type: feature
+    split: dev
+    question: "end to end sign in: login page, providers, session handling and route protection"
+    files: ["app/(auth)/login/page.tsx", components/user-auth-form.tsx, lib/auth.ts, "pages/api/auth/[...nextauth].ts", middleware.ts, lib/validations/auth.ts, prisma/schema.prisma]
+    note: "UserAuthForm calls signIn('email'|'github'); authOptions with PrismaAdapter and Account/Session/VerificationToken models; middleware guards routes"
+  - id: tx-feature-05
+    type: feature
+    split: holdout
+    question: "everything involved in the user settings page for changing account name"
+    files: ["app/(dashboard)/dashboard/settings/page.tsx", components/user-name-form.tsx, "app/api/users/[userId]/route.ts", lib/validations/user.ts, lib/session.ts, prisma/schema.prisma]
+    note: "Settings page renders UserNameForm -> PATCH /api/users/[userId] validated by userNameSchema -> db.user.update name"
+  - id: tx-feature-06
+    type: feature
+    split: dev
+    question: "everything involved in rendering a documentation page from MDX including nav and metadata"
+    files: ["app/(docs)/docs/[[...slug]]/page.tsx", contentlayer.config.js, components/mdx-components.tsx, lib/toc.ts, components/toc.tsx, components/pager.tsx, config/docs.ts, app/api/og/route.tsx]
+    note: "DocPage finds allDocs by slug, renders Mdx, getTableOfContents + DashboardTableOfContents, DocsPager over docsConfig, OG image via /api/og in generateMetadata"

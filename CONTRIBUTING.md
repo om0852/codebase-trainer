@@ -26,7 +26,7 @@ We use standard TypeScript for the backend and Vite for the frontend website.
 
 ## 📝 Pull Request Guidelines
 
-- Ensure your code passes all unit tests (`npm run test`).
+- Ensure your code passes all tests (`npm test`) and does not regress the retrieval benchmark (`npm run bench:setup` once, then `npm run bench -- --split=dev --baseline=bench/baseline-dev.json`).
 - Run the security audit locally before pushing: `npm run security`.
 - Keep your commits atomic and descriptive (we follow Conventional Commits: `feat:`, `fix:`, `docs:`).
 - If you are adding a new MCP tool, ensure you update the `website/index.html` UI to reflect the new feature!

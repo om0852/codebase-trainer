@@ -17,6 +17,23 @@
 - **Conventions learned from the code** with the counts behind each value (`evidence`), plus role counts for pages, routes, hooks, stores and middleware.
 - **Real duplication scan and module dependency diagram** (`cb-trainer duplicates`, `cb-trainer architecture`).
 
+## 📏 Benchmark
+
+104 hand-labelled questions ("where is password reset implemented", "everything involved in favoriting an article") on four open-source apps pinned to exact commits: [taxonomy](https://github.com/shadcn-ui/taxonomy) (Next.js + Prisma), [node-express-realworld](https://github.com/gothinkster/node-express-realworld-example-app) (Express + Prisma), [nestjs-realworld](https://github.com/lujakob/nestjs-realworld-example-app) (NestJS + TypeORM) and [create-t3-turbo](https://github.com/t3-oss/create-t3-turbo) (tRPC monorepo). The baseline is what an agent does without an index: grep the question's words and open the files with the most matches.
+
+| v1.4.0, all 104 questions | codebase-trainer | grep baseline |
+|---|---|---|
+| Right file ranked first ("locate", 80 questions) | **56%** | 24% |
+| Right file in the top 5 | **83%** | 65% |
+| Mean reciprocal rank | **0.69** | 0.43 |
+| Median tokens read to reach the right file | **993** | 3,974 |
+| Share of a feature's files in the top 10 ("feature", 24 questions) | **54%** | 40% |
+| Features with every needed file in the top 20 | 17% | 0% |
+
+Search takes 60–150 ms per query on these repos (100–170 files each). The 28 questions held out from tuning score the same as the rest (MRR 0.72 vs 0.37).
+
+**Where it is still weak:** whole-feature questions (only 17% fully covered) and Prisma schemas, which are not indexed yet. Both are the next items on the [implementation plan](docs/IMPLEMENTATION_PLAN.md). Reproduce with `npm run bench:setup && npm run bench`; results are written to `bench/results/`.
+
 ## 🌟 Features
 
 1. **Token-Budgeted Code Skeletons (`--max-tokens`)**: Compresses code into structural skeletons that keep classes, function signatures, interfaces and docstrings while replacing function bodies with placeholders.

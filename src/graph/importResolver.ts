@@ -223,7 +223,7 @@ export class ImportResolver {
   }
 
   private static loadAliasConfig(configFile: string, depth: number = 0): PathAliasConfig | null {
-    let parsed: { extends?: string; compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> } };
+    let parsed: { extends?: unknown; compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> } };
     try {
       parsed = JSON.parse(ImportResolver.stripJsonComments(fs.readFileSync(configFile, 'utf8')));
     } catch {
@@ -231,11 +231,22 @@ export class ImportResolver {
     }
 
     const configDir = path.dirname(configFile);
-    let inherited: PathAliasConfig | null = null;
-    // Only relative `extends` are followed; package-based shared configs rarely define project paths
-    if (parsed.extends && parsed.extends.startsWith('.') && depth < 5) {
-      const parentFile = parsed.extends.endsWith('.json') ? parsed.extends : parsed.extends + '.json';
-      inherited = this.loadAliasConfig(path.resolve(configDir, parentFile), depth + 1);
+    // Asserted rather than annotated so TypeScript does not narrow it to `null` across the loop below
+    let inherited = null as PathAliasConfig | null;
+    // `extends` is a string or (TypeScript 5+) an array where later entries override earlier ones. Only relative
+    // entries are followed; package-based shared configs (`@acme/tsconfig/base.json`) rarely define project paths.
+    const parents = (Array.isArray(parsed.extends) ? parsed.extends : [parsed.extends])
+      .filter((e): e is string => typeof e === 'string' && e.startsWith('.'));
+    for (const parent of depth < 5 ? parents : []) {
+      const parentFile = parent.endsWith('.json') ? parent : parent + '.json';
+      const loaded = this.loadAliasConfig(path.resolve(configDir, parentFile), depth + 1);
+      if (!loaded) continue;
+      const previous: PathAliasConfig | null = inherited;
+      inherited = {
+        baseUrl: loaded.baseUrl ?? previous?.baseUrl ?? null,
+        pathsBase: Object.keys(loaded.paths).length > 0 ? loaded.pathsBase : (previous?.pathsBase ?? loaded.pathsBase),
+        paths: Object.keys(loaded.paths).length > 0 ? loaded.paths : (previous?.paths ?? {})
+      };
     }
 
     const options = parsed.compilerOptions || {};

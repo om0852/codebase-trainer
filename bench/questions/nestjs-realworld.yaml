@@ -1,0 +1,158 @@
+repo: nestjs-realworld
+questions:
+  - id: ne-locate-01
+    type: locate
+    split: dev
+    question: "how is the logged-in user taken from the auth token"
+    files: [src/user/auth.middleware.ts, src/user/user.decorator.ts]
+    note: "AuthMiddleware.use splits the Authorization header, jwt.verify(token, SECRET), loads the user by id and sets req.user"
+  - id: ne-locate-02
+    type: locate
+    split: dev
+    question: "where are user passwords hashed before being saved to the database"
+    files: [src/user/user.entity.ts]
+    note: "UserEntity @BeforeInsert hashPassword() calls argon2.hash(this.password)"
+  - id: ne-locate-03
+    type: locate
+    split: dev
+    question: "how does login check that the password someone typed is correct"
+    files: [src/user/user.service.ts, src/user/user.controller.ts]
+    note: "UserService.findOne looks the user up by email and calls argon2.verify; the POST users/login handler returns 401 when that fails"
+  - id: ne-locate-04
+    type: locate
+    split: dev
+    question: "where is the JWT created and how long until it expires"
+    files: [src/user/user.service.ts]
+    note: "UserService.generateJWT signs id/username/email with exp = today + 60 days"
+  - id: ne-locate-05
+    type: locate
+    split: holdout
+    question: "how do controllers get the current user's id or email as a handler parameter, even on public routes"
+    files: [src/user/user.decorator.ts]
+    note: "createParamDecorator User reads req.user[data], or falls back to decoding the bearer token on public routes"
+  - id: ne-locate-06
+    type: locate
+    split: dev
+    question: "which routes require authentication and where is that configured"
+    files: [src/article/article.module.ts, src/user/user.module.ts]
+    note: "ArticleModule.configure applies AuthMiddleware forRoutes feed/POST/PUT/DELETE/comments/favorite; UserModule applies it to GET/PUT user"
+  - id: ne-locate-07
+    type: locate
+    split: dev
+    question: "how are URL slugs generated from article titles and made unique"
+    files: [src/article/article.service.ts]
+    note: "ArticleService.slugify uses slug(title, {lower:true}) plus a random base36 suffix"
+  - id: ne-locate-08
+    type: locate
+    split: dev
+    question: "how does the article list endpoint filter by tag, author, or favorited user"
+    files: [src/article/article.service.ts, src/article/article.controller.ts]
+    note: "ArticleService.findAll builds a query builder with andWhere for query.tag, query.author and query.favorited"
+  - id: ne-locate-09
+    type: locate
+    split: holdout
+    question: "how is limit/offset pagination applied to article lists"
+    files: [src/article/article.service.ts]
+    note: "findAll and findFeed call qb.getCount() then qb.limit(query.limit) and qb.offset(query.offset)"
+  - id: ne-locate-10
+    type: locate
+    split: dev
+    question: "how is the request body validated and how are validation errors formatted in the response"
+    files: [src/shared/pipes/validation.pipe.ts]
+    note: "Custom ValidationPipe.transform runs plainToClass + class-validator validate; buildError maps constraints into an errors object"
+  - id: ne-locate-11
+    type: locate
+    split: dev
+    question: "what checks stop someone from registering with a username or email that is already taken"
+    files: [src/user/user.service.ts]
+    note: "UserService.create queries user.username OR user.email and throws 400 'Username and email must be unique.'"
+  - id: ne-locate-12
+    type: locate
+    split: dev
+    question: "where is the database connection configured"
+    files: [src/app.module.ts]
+    note: "ApplicationModule imports TypeOrmModule.forRoot(), which reads ormconfig.json (only a .example template is committed, so the module is the indexed answer)"
+  - id: ne-locate-13
+    type: locate
+    split: holdout
+    question: "where does the secret key used to sign tokens come from"
+    files: [src/user/user.service.ts, src/user/auth.middleware.ts]
+    note: "SECRET is imported from ../config (only config.ts.example is committed) by user.service and auth.middleware"
+  - id: ne-locate-14
+    type: locate
+    split: dev
+    question: "where is the follower/following relationship between users stored"
+    files: [src/profile/follows.entity.ts]
+    note: "FollowsEntity table 'follows' with followerId and followingId columns"
+  - id: ne-locate-15
+    type: locate
+    split: dev
+    question: "how does a profile response know whether the viewer follows that user"
+    files: [src/profile/profile.service.ts]
+    note: "ProfileService.findProfile looks up followsRepository {followerId: id, followingId} and sets profile.following when id is present"
+  - id: ne-locate-16
+    type: locate
+    split: holdout
+    question: "how does favoriting an article update its favorites count"
+    files: [src/article/article.service.ts, src/user/user.entity.ts]
+    note: "ArticleService.favorite pushes into user.favorites (ManyToMany JoinTable) and increments article.favoriteCount; unFavorite decrements"
+  - id: ne-locate-17
+    type: locate
+    split: dev
+    question: "where is the endpoint that returns all tags"
+    files: [src/tag/tag.controller.ts, src/tag/tag.service.ts]
+    note: "TagController @Get() findAll delegates to TagService.findAll -> tagRepository.find()"
+  - id: ne-locate-18
+    type: locate
+    split: dev
+    question: "where is the global /api prefix, CORS, and Swagger docs set up at startup"
+    files: [src/main.ts]
+    note: "bootstrap() uses NestFactory.create with cors:true, app.setGlobalPrefix('api'), SwaggerModule.setup('/docs')"
+  - id: ne-locate-19
+    type: locate
+    split: dev
+    question: "how is the article updated timestamp kept current when an article is edited"
+    files: [src/article/article.entity.ts]
+    note: "ArticleEntity @BeforeUpdate updateTimestamp() sets this.updated = new Date"
+  - id: ne-locate-20
+    type: locate
+    split: holdout
+    question: "how is the personal feed of articles from followed authors built"
+    files: [src/article/article.service.ts, src/article/article.controller.ts]
+    note: "ArticleService.findFeed collects followingId values from followsRepository and queries article.authorId IN (:ids); controller @Get('feed')"
+  - id: ne-feature-01
+    type: feature
+    split: dev
+    question: "everything involved in user registration and login, from routes to password hashing and token issuance"
+    files: [src/user/user.controller.ts, src/user/user.service.ts, src/user/user.entity.ts, src/user/dto/create-user.dto.ts, src/user/dto/login-user.dto.ts, src/shared/pipes/validation.pipe.ts, src/user/user.interface.ts, src/user/user.module.ts]
+    note: "POST users and users/login with ValidationPipe -> UserService.create/findOne/generateJWT -> UserEntity argon2 hash; DTOs use @IsNotEmpty"
+  - id: ne-feature-02
+    type: feature
+    split: dev
+    question: "everything involved in creating, reading, updating and deleting articles"
+    files: [src/article/article.controller.ts, src/article/article.service.ts, src/article/article.entity.ts, src/article/dto/create-article.dto.ts, src/article/article.interface.ts, src/article/article.module.ts, src/user/auth.middleware.ts]
+    note: "ArticleController GET/POST/PUT/DELETE :slug -> ArticleService.create/findOne/update/delete; ArticleModule protects writes with AuthMiddleware"
+  - id: ne-feature-03
+    type: feature
+    split: holdout
+    question: "everything involved in following and unfollowing users and showing profiles"
+    files: [src/profile/profile.controller.ts, src/profile/profile.service.ts, src/profile/follows.entity.ts, src/profile/profile.interface.ts, src/profile/profile.module.ts, src/user/user.decorator.ts, src/user/auth.middleware.ts]
+    note: "ProfileController GET :username, POST/DELETE :username/follow -> ProfileService.follow/unFollow/findProfile; ProfileModule applies AuthMiddleware to follow routes"
+  - id: ne-feature-04
+    type: feature
+    split: dev
+    question: "everything involved in adding, listing and deleting comments on an article"
+    files: [src/article/article.controller.ts, src/article/article.service.ts, src/article/comment.entity.ts, src/article/dto/create-comment.ts, src/article/article.entity.ts, src/article/article.module.ts]
+    note: "Routes :slug/comments and :slug/comments/:id -> addComment/findComments/deleteComment; Comment ManyToOne article, article.comments eager OneToMany"
+  - id: ne-feature-05
+    type: feature
+    split: dev
+    question: "everything involved in favoriting and unfavoriting articles"
+    files: [src/article/article.controller.ts, src/article/article.service.ts, src/article/article.entity.ts, src/user/user.entity.ts, src/article/article.module.ts, src/user/user.decorator.ts]
+    note: "POST/DELETE :slug/favorite -> ArticleService.favorite/unFavorite updating UserEntity.favorites and ArticleEntity.favoriteCount; routes protected in ArticleModule"
+  - id: ne-feature-06
+    type: feature
+    split: holdout
+    question: "everything involved in authenticating requests with a bearer token and reading/updating the current user"
+    files: [src/user/auth.middleware.ts, src/user/user.decorator.ts, src/user/user.module.ts, src/user/user.service.ts, src/user/user.controller.ts, src/user/dto/update-user.dto.ts]
+    note: "UserModule.configure applies AuthMiddleware to GET/PUT user; middleware verifies JWT via SECRET and calls UserService.findById; @User decorator feeds findMe/update"
