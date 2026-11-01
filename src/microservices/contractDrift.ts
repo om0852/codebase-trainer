@@ -73,7 +73,7 @@ export class ContractDriftDetector {
           const endpoint = fetchMatch[1];
           if (endpoint.includes('...')) return;
           if (endpoint.startsWith('/') || endpoint.includes('api')) {
-            const contextBlock = lines.slice(idx, Math.min(lines.length, idx + 12)).join(' ');
+            const contextBlock = this.callArguments(lines, idx, line.indexOf('(', fetchMatch.index!));
             
             // Extract method
             const methodMatch = contextBlock.match(/method\s*:\s*['"`](GET|POST|PUT|DELETE|PATCH)['"`]/i);
@@ -99,7 +99,7 @@ export class ContractDriftDetector {
         if (axiosMatch) {
           const method = axiosMatch[1].toUpperCase();
           const endpoint = axiosMatch[2];
-          const contextBlock = lines.slice(idx, Math.min(lines.length, idx + 10)).join(' ');
+          const contextBlock = this.callArguments(lines, idx, line.indexOf('(', axiosMatch.index!));
           const payloadKeys = method !== 'GET' ? this.extractKeysFromBody(contextBlock) : [];
           const queryKeys = this.extractQueryKeys(endpoint);
 
@@ -352,11 +352,43 @@ export class ContractDriftDetector {
 
   // --- Helper Parsers ---
 
-  private static normalizePath(p: string): string {
+  /**
+   * Text of a call's argument list, from the `(` at `openIndex` on line `lineIdx` to its matching `)`,
+   * so method/body detection cannot read options from a neighbouring call.
+   */
+  private static callArguments(lines: string[], lineIdx: number, openIndex: number): string {
+    let depth = 0;
+    let quote: string | null = null;
+    let out = '';
+    for (let l = lineIdx; l < Math.min(lines.length, lineIdx + 40); l++) {
+      const text = l === lineIdx ? lines[l].slice(openIndex) : lines[l];
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        out += ch;
+        if (quote) {
+          if (ch === '\\') { out += text[++i] ?? ''; continue; }
+          if (ch === quote) quote = null;
+          continue;
+        }
+        if (ch === '"' || ch === "'" || ch === '`') quote = ch;
+        else if (ch === '(') depth++;
+        else if (ch === ')' && --depth === 0) return out;
+      }
+      out += ' ';
+    }
+    return out;
+  }
+
+  public static normalizePath(p: string): string {
     return p.toLowerCase()
+      .replace(/^https?:\/\/[^/]+/, '')
+      .split('?')[0]
+      // Template-literal segments (`/api/keys/${id}`) are path params on the client side
+      .replace(/\$\{[^}]+\}/g, '{id}')
       .replace(/\/+/g, '/')
       .replace(/\/$/, '')
       .replace(/:\w+/g, '{id}')
+      .replace(/\[\.{3}\w+\]/g, '{*}')
       .replace(/\[\w+\]/g, '{id}');
   }
 

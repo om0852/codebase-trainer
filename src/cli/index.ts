@@ -102,8 +102,13 @@ program
     }
 
     console.log(`🔄 Tracing End-to-End Execution Flow for: "${feature}"...`);
-    console.log(`\n📐 Mermaid Sequence Diagram:\n`);
-    console.log(`\`\`\`mermaid\n${flow.mermaidDiagram}\n\`\`\``);
+    if (flow.pathFound) {
+      console.log(`🚪 Entry point(s): ${flow.entryPoints.join(', ')} | ${flow.edges.length} traced edge(s)`);
+      console.log(`\n📐 Mermaid Sequence Diagram:\n`);
+      console.log(`\`\`\`mermaid\n${flow.mermaidDiagram}\n\`\`\``);
+    } else {
+      console.log(`⚠️ No call path found between the files matching this query.`);
+    }
 
     console.log(`\n📋 Step-by-Step Code Execution Trace:\n`);
     console.log(flow.summaryFlow);

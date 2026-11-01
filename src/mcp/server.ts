@@ -171,7 +171,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
       tools: [
         {
           name: 'trace_flow',
-          description: 'Generate step-by-step execution flow and Mermaid sequence diagram for how a feature or architecture works.',
+          description: 'Trace how a feature executes: finds entry points (pages, route handlers, CLI commands) and follows real call sites and fetch-to-route-handler links, each with file:line evidence. Returns pathFound=false with related files instead of inventing a path.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -361,11 +361,13 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     if (name === 'trace_flow' || name === 'trace_execution_flow') {
       const feature = String(args?.feature || '');
       const flow = ExecutionFlowTracer.traceFlow(repoPath, feature);
+      // steps and summaryFlow restate the edges for humans; agents get the edges once
+      const { steps, summaryFlow, ...compactFlow } = flow;
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(flow, null, 2),
+            text: JSON.stringify(compactFlow, null, 2),
           },
         ],
       };
