@@ -338,7 +338,8 @@ export class SemanticSearchEngine {
   }
 
   /**
-   * Hybrid Search: Reciprocal Rank Fusion of AST Symbol Precision + Okapi BM25
+   * Hybrid search: the sum of Okapi BM25, an exact-symbol bonus, a hashed trigram similarity bonus and a
+   * PageRank bonus, scaled by result kind (code, test, doc, config)
    */
   public static search(repoPath: string, query: string, topK: number = 5): SearchResult[] {
     return this.searchWithStatus(repoPath, query, topK).results;

@@ -1,7 +1,7 @@
 {
   "name": "codebase-trainer",
-  "version": "1.3.0",
-  "description": "Fast, local per-codebase intelligence index and NLP model generator for AI IDEs & agents",
+  "version": "1.4.0",
+  "description": "Fast, local, zero-setup codebase index for AI coding agents: code search, flow tracing, impact analysis and diff checks over MCP or CLI",
   "main": "dist/cli/index.js",
   "bin": {
     "cb-trainer": "dist/cli/index.js"

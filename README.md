@@ -1,18 +1,29 @@
 # Codebase Trainer 🚀
 
-> **Fast, local, per-codebase intelligence index and NLP convention model for AI IDEs & Agents.**
+> **Fast, local, zero-setup codebase index and context tools for AI coding agents.**
 
-`codebase-trainer` (`cb-trainer`) prevents AI coding agents (Claude Code, Cursor, Antigravity IDE) from repeatedly grepping source files to re-discover project conventions. It extracts AST facts, mines code & git conventions into `.codebase/conventions.yaml`, builds a local semantic vector search index (`.codebase/embeddings.json`), maps symbol call graphs, scans security vulnerabilities, and serves them via standard **Model Context Protocol (MCP)** or CLI.
+`codebase-trainer` (`cb-trainer`) gives AI coding agents (Claude Code, Cursor, and other MCP clients) a local map of a repository so they stop re-grepping it: code search, execution-flow traces, change impact, a diff checker, and conventions learned from the code, served over the **Model Context Protocol (MCP)** or the CLI. It runs fully offline with no API keys, vector database, or language servers.
+
+**How it works, honestly:** source files are analysed with pattern-based (regex) extractors, not a compiler or language server. That keeps it dependency-free and fast, and works best on JavaScript/TypeScript; Python is partially supported and Go/Java/Rust only lightly. Tools report what they could not determine (`pathFound: false`, `notCovered`, `evidence`, `stale`) rather than guessing.
 
 ---
 
-## 🌟 Major Features & v1.3.0 Upgrades
+## 🆕 What's new in 1.4.0
 
-1. **Token-Budgeted AST Skeletonizer (`--max-tokens`)**: Compresses code by 50%–85% into structural AST skeletons—preserving classes, function signatures, interfaces, and docstrings while stripping function bodies into placeholders (`/* ... */` or `pass`).
-2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Automatically parses frontend `fetch()` / `axios` calls and backend Express/Next.js route handlers, flagging payload key mismatches, missing required fields, dead endpoints, and orphan routes.
-3. **PageRank-Weighted Graph Centrality (Aider Style)**: Implements Power Iteration PageRank over module dependencies and call graphs. Core architectural hubs receive boosted ranking over peripheral one-off scripts.
-4. **100% Offline Dense Vector Embeddings**: Pure local semantic vector embedding engine with cosine similarity and hybrid Reciprocal Rank Fusion (BM25 + Dense Vectors + AST Symbols + PageRank).
-5. **Interactive Mermaid Architecture Dashboard (`cb-trainer ui`)**: Generates an interactive dark-mode dashboard with zoomable Mermaid module call graphs and visual circular dependency highlights.
+- **Import graph that actually resolves imports**: ES module imports (previously missed entirely), `tsconfig`/`jsconfig` path aliases, `.js` → `.ts`, index files, Python/Java/Rust modules. PageRank, impact analysis and cycle detection now run on it.
+- **Execution-flow tracing from real call sites**: entry points (pages, route handlers, CLI commands) → calls with `file:line` evidence → `fetch('/api/…')` linked to the matching route handler → data layer. Returns `pathFound: false` instead of inventing a path.
+- **Diff checker on real git diffs** (`check_diff_against_standards`, `cb-trainer review`): secrets, security risks, removed exports still imported elsewhere, API contract drift, and convention checks, each with `file:line`, plus the list of what it does not check.
+- **Search**: stemming (resolve/resolver/resolution), question words ignored, code ranked above tests and docs, compact agent output, automatic refresh of changed files before every search, `.gitignore` honoured.
+- **Conventions learned from the code** with the counts behind each value (`evidence`), plus role counts for pages, routes, hooks, stores and middleware.
+- **Real duplication scan and module dependency diagram** (`cb-trainer duplicates`, `cb-trainer architecture`).
+
+## 🌟 Features
+
+1. **Token-Budgeted Code Skeletons (`--max-tokens`)**: Compresses code into structural skeletons that keep classes, function signatures, interfaces and docstrings while replacing function bodies with placeholders.
+2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Parses frontend `fetch()` / `axios` calls and Express / Next.js route handlers, flagging method and payload mismatches, dead endpoints and orphan routes.
+3. **PageRank Graph Centrality (Aider style)**: Power-iteration PageRank over the resolved import graph, so central modules rank above one-off scripts.
+4. **Hybrid Local Search**: BM25 over stemmed tokens, combined with exact-symbol matches, a hashed character-trigram similarity score, and PageRank. The similarity score is lexical (it catches spelling and word-part overlap, not synonyms); there is no neural embedding model.
+5. **Interactive Mermaid Dashboard (`cb-trainer ui`)**: Dark-mode dashboard with module graphs and circular-dependency highlights.
 6. **Live Dynamic MCP Resources**:
    - `codebase://conventions`: Project architecture rules and coding conventions.
    - `codebase://routes`: Live map of exposed REST endpoints and consumed services.

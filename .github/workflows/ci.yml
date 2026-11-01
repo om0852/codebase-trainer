@@ -10,8 +10,14 @@ jobs:
   build-and-test:
     name: Build, Test & Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to upload SARIF results to GitHub Code Scanning
+      security-events: write
 
     strategy:
+      # Report every Node version's result instead of cancelling the others on the first failure
+      fail-fast: false
       matrix:
         node-version: [18.x, 20.x, 22.x]
 
@@ -43,11 +49,12 @@ jobs:
       - name: 📊 Export SARIF Vulnerability Report
         run: node dist/cli/index.js ci
 
+      # One upload per run: Code Scanning rejects several uploads under the same category
       - name: 📤 Upload SARIF Security Artifact
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && matrix.node-version == '22.x' && hashFiles('.codebase/results.sarif') != ''
         with:
-          sarif_file: .codebase/sarif_report.json
+          sarif_file: .codebase/results.sarif
           category: codebase-trainer-security
 
   docker-build:

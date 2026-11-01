@@ -2,9 +2,8 @@ export class DenseVectorEngine {
   private static readonly DIMENSIONS = 128;
 
   /**
-   * Generates a deterministic, normalized dense vector embedding (128 dimensions)
-   * using subword n-gram hashing and semantic term frequency.
-   * If an ONNX runtime / @xenova/transformers model is loaded, it delegates to ONNX.
+   * Generates a deterministic, normalized 128-dimension vector by hashing words and character 3-grams
+   * (feature hashing). Similarity is lexical: it captures shared words and word parts, not meaning.
    */
   public static embedText(text: string): number[] {
     const vector = new Array<number>(this.DIMENSIONS).fill(0);
