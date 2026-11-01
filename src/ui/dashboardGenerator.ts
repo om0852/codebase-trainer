@@ -21,15 +21,13 @@ export class DashboardGenerator {
 
     // Add nodes & edges from importsMap (limit to top 40 for clarity)
     const fileEntries = Object.entries(graph.importsMap || {}).slice(0, 35);
-    fileEntries.forEach(([filePath, imports]) => {
+    fileEntries.forEach(([filePath]) => {
       const srcAlias = getAlias(filePath);
       const srcName = path.basename(filePath);
       mermaidLines.push(`  ${srcAlias}["${srcName}"]`);
 
-      imports.forEach(imp => {
-        // Find if this import maps to an existing file
-        const targetFile = Object.keys(graph.importsMap).find(f => f.includes(imp) || f.endsWith(`${imp}.ts`) || f.endsWith(`${imp}.js`));
-        if (targetFile && targetFile !== filePath) {
+      (graph.resolvedImports?.[filePath] || []).forEach(targetFile => {
+        if (targetFile !== filePath) {
           const tgtAlias = getAlias(targetFile);
           const edgeKey = `${srcAlias}-->${tgtAlias}`;
           if (!addedEdges.has(edgeKey)) {

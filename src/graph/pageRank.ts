@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { CallGraphAnalyzer, DependencyGraph } from './callGraph.js';
+import { ImportResolver } from './importResolver.js';
 import { ASTFact } from '../types/index.js';
 
 export interface PageRankNode {
@@ -56,23 +57,15 @@ export class PageRankCalculator {
       inEdges.set(node, new Set());
     });
 
-    // Populate edges from importedModules
-    facts.forEach(f => {
-      const srcRel = path.relative(repoPath, f.filePath).replace(/\\/g, '/');
-      const imports = f.importedModules || [];
-
-      imports.forEach(imp => {
-        // Resolve import to relative file path in fileNodes
-        const impNorm = imp.replace(/\\/g, '/');
-        const resolved = Array.from(fileNodes).find(target => {
-          if (target === srcRel) return false;
-          const targetBase = target.replace(/\.[^/.]+$/, '');
-          return target.includes(impNorm) || targetBase.endsWith(impNorm);
-        });
-
-        if (resolved && resolved !== srcRel) {
-          outEdges.get(srcRel)?.add(resolved);
-          inEdges.get(resolved)?.add(srcRel);
+    // Populate edges from resolved imports
+    const resolvedImports = graph.resolvedImports || ImportResolver.buildImportGraph(repoPath, facts);
+    Object.entries(resolvedImports).forEach(([src, targets]) => {
+      const srcRel = path.relative(repoPath, src).replace(/\\/g, '/');
+      targets.forEach(target => {
+        const tgtRel = path.relative(repoPath, target).replace(/\\/g, '/');
+        if (tgtRel !== srcRel && fileNodes.has(srcRel) && fileNodes.has(tgtRel)) {
+          outEdges.get(srcRel)?.add(tgtRel);
+          inEdges.get(tgtRel)?.add(srcRel);
         }
       });
     });

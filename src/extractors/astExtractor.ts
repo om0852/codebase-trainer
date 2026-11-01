@@ -94,18 +94,28 @@ export class ASTExtractor {
 
     // Analyze Imports
     const importedModules: string[] = [];
-    let importRegex = /(?:import|require)\(['"]?([^'"\)]+)['"]?\)?/;
-    if (language === 'python') importRegex = /^(?:import|from)\s+([a-zA-Z0-9_\.]+)/;
-    if (language === 'go') importRegex = /import\s+[\(\s]*["']([^"']+)["']/;
-    if (language === 'rust') importRegex = /^use\s+([a-zA-Z0-9_:]+)/;
-    if (language === 'java') importRegex = /^import\s+([a-zA-Z0-9_\.]+);/;
+    if (['typescript', 'javascript'].includes(language)) {
+      // Scan whole content so multi-line `import {\n a,\n b\n} from '...'` statements are captured
+      const staticImportRegex = /(?:^|[\s;])(?:import|export)\s+(?:type\s+)?(?:[\w$*{}\s,]+?\s+from\s+)?['"]([^'"\n]+)['"]/g;
+      const callImportRegex = /\b(?:import|require)\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g;
+      for (const m of content.matchAll(staticImportRegex)) importedModules.push(m[1]);
+      for (const m of content.matchAll(callImportRegex)) importedModules.push(m[1]);
+    } else {
+      let importRegex: RegExp | null = null;
+      if (language === 'python') importRegex = /^(?:import|from)\s+([a-zA-Z0-9_\.]+)/;
+      if (language === 'go') importRegex = /import\s+[\(\s]*["']([^"']+)["']/;
+      if (language === 'rust') importRegex = /^use\s+([a-zA-Z0-9_:]+)/;
+      if (language === 'java') importRegex = /^import\s+([a-zA-Z0-9_\.]+);/;
 
-    lines.forEach((line: string) => {
-      const match = line.trim().match(importRegex);
-      if (match && match[1]) {
-        importedModules.push(match[1]);
+      if (importRegex) {
+        lines.forEach((line: string) => {
+          const match = line.trim().match(importRegex!);
+          if (match && match[1]) {
+            importedModules.push(match[1]);
+          }
+        });
       }
-    });
+    }
 
     // Function metrics
     let funcCount = 0;
@@ -183,7 +193,7 @@ export class ASTExtractor {
       exportStyle,
       hasTypeAnnotations,
       typeCastingCount,
-      importedModules,
+      importedModules: Array.from(new Set(importedModules)),
       funcCount,
       avgFuncLength,
       symbols: Array.from(symbols)

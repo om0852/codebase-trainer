@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
+import { ImportResolver } from './importResolver.js';
 
 export interface FunctionNode {
   name: string;
@@ -11,7 +12,10 @@ export interface FunctionNode {
 
 export interface DependencyGraph {
   nodes: Record<string, FunctionNode>;
+  // Raw import specifiers per file, as written in source
   importsMap: Record<string, string[]>;
+  // Import specifiers resolved to indexed files (external packages dropped)
+  resolvedImports: Record<string, string[]>;
   qualityIssues: Array<{
     type: 'circular_dependency' | 'high_complexity' | 'dead_code_warning' | 'sync_io_hotpath';
     filePath: string;
@@ -27,6 +31,7 @@ export class CallGraphAnalyzer {
     const nodes: Record<string, FunctionNode> = {};
     const importsMap: Record<string, string[]> = {};
     const qualityIssues: DependencyGraph['qualityIssues'] = [];
+    const resolvedImports = ImportResolver.buildImportGraph(repoPath, facts);
 
     facts.forEach(fact => {
       importsMap[fact.filePath] = fact.importedModules;
@@ -86,25 +91,66 @@ export class CallGraphAnalyzer {
       }
     });
 
-    // Detect Circular Dependencies between files
-    Object.keys(importsMap).forEach(fileA => {
-      const depsA = importsMap[fileA];
-      depsA.forEach(dep => {
-        const resolvedDep = Object.keys(importsMap).find(f => f.includes(dep));
-        if (resolvedDep && importsMap[resolvedDep]) {
-          const depsB = importsMap[resolvedDep];
-          if (depsB.some(d => fileA.includes(d))) {
-            qualityIssues.push({
-              type: 'circular_dependency',
-              filePath: fileA,
-              description: `Circular import dependency detected between \`${path.basename(fileA)}\` and \`${path.basename(resolvedDep)}\`.`,
-              severity: 'error'
-            });
-          }
-        }
+    // Detect Circular Dependencies: every strongly connected component of the resolved import graph contains a cycle
+    this.findImportCycles(resolvedImports).forEach(cycle => {
+      const members = cycle.map(f => path.relative(repoPath, f).replace(/\\/g, '/'));
+      cycle.forEach(file => {
+        qualityIssues.push({
+          type: 'circular_dependency',
+          filePath: file,
+          description: `Circular import dependency among ${cycle.length} file(s): ${members.join(', ')}`,
+          severity: 'error'
+        });
       });
     });
 
-    return { nodes, importsMap, qualityIssues };
+    return { nodes, importsMap, resolvedImports, qualityIssues };
+  }
+
+  /**
+   * Tarjan's SCC over the import graph; returns components with more than one file (or a file importing itself).
+   */
+  public static findImportCycles(graph: Record<string, string[]>): string[][] {
+    let index = 0;
+    const indices = new Map<string, number>();
+    const lowLinks = new Map<string, number>();
+    const onStack = new Set<string>();
+    const stack: string[] = [];
+    const cycles: string[][] = [];
+
+    const strongConnect = (v: string) => {
+      indices.set(v, index);
+      lowLinks.set(v, index);
+      index++;
+      stack.push(v);
+      onStack.add(v);
+
+      (graph[v] || []).forEach(w => {
+        if (!indices.has(w)) {
+          strongConnect(w);
+          lowLinks.set(v, Math.min(lowLinks.get(v)!, lowLinks.get(w)!));
+        } else if (onStack.has(w)) {
+          lowLinks.set(v, Math.min(lowLinks.get(v)!, indices.get(w)!));
+        }
+      });
+
+      if (lowLinks.get(v) === indices.get(v)) {
+        const component: string[] = [];
+        let w: string;
+        do {
+          w = stack.pop()!;
+          onStack.delete(w);
+          component.push(w);
+        } while (w !== v);
+        if (component.length > 1 || (graph[v] || []).includes(v)) {
+          cycles.push(component.reverse());
+        }
+      }
+    };
+
+    Object.keys(graph).forEach(v => {
+      if (!indices.has(v)) strongConnect(v);
+    });
+    return cycles;
   }
 }

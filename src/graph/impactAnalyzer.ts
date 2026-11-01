@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
+import { ImportResolver } from './importResolver.js';
 
 export interface ImpactAnalysisResult {
   target: string;
@@ -22,44 +23,41 @@ export class ImpactAnalyzer {
     const rawBasename = path.basename(targetFileOrSymbol);
     const targetSymbolName = rawBasename.split('.')[0].toLowerCase();
     const targetNormalized = targetFileOrSymbol.toLowerCase().replace(/\\/g, '/');
+    const toRel = (f: string) => path.relative(repoPath, f).replace(/\\/g, '/');
 
-    // 1. Identify Direct Dependents (files that import/require target)
-    facts.forEach(fact => {
-      const factRelPath = path.relative(repoPath, fact.filePath).replace(/\\/g, '/');
-      if (factRelPath.toLowerCase() === targetNormalized) return;
+    // Resolve the target to indexed files: an exact/suffix file path, otherwise every file declaring the symbol
+    const resolver = ImportResolver.forFacts(repoPath, facts);
+    const targetFile = resolver.findFile(targetFileOrSymbol);
+    const targetFiles = new Set<string>(
+      targetFile ? [targetFile] : facts.filter(f => (f.symbols || []).includes(targetFileOrSymbol)).map(f => f.filePath)
+    );
+    const importers = ImportResolver.invertGraph(ImportResolver.buildImportGraph(repoPath, facts));
 
-      const imports = fact.importedModules;
-      const isDirectlyImported = imports.some(imp => {
-        const impLower = imp.toLowerCase();
-        return impLower.includes(targetSymbolName) || targetNormalized.includes(impLower);
+    // 1. Identify Direct Dependents (files whose resolved imports include the target)
+    targetFiles.forEach(t => {
+      (importers[t] || []).forEach(f => {
+        if (!targetFiles.has(f)) directDependents.add(toRel(f));
       });
-
-      if (isDirectlyImported) {
-        directDependents.add(factRelPath);
-      }
     });
 
-    // 2. Identify Transitive Dependents
-    let addedNew = true;
-    const currentSet = new Set(directDependents);
-
-    while (addedNew) {
-      addedNew = false;
-      facts.forEach(fact => {
-        const factRelPath = path.relative(repoPath, fact.filePath).replace(/\\/g, '/');
-        if (currentSet.has(factRelPath) || directDependents.has(factRelPath)) return;
-
-        const imports = fact.importedModules;
-        const importsDependent = imports.some(imp =>
-          Array.from(currentSet).some(dep => dep.toLowerCase().includes(imp.toLowerCase()))
-        );
-
-        if (importsDependent) {
-          transitiveDependents.add(factRelPath);
-          currentSet.add(factRelPath);
-          addedNew = true;
-        }
+    // 2. Identify Transitive Dependents (reverse import graph BFS from the direct dependents)
+    const visited = new Set<string>(targetFiles);
+    const queue: string[] = [];
+    targetFiles.forEach(t => (importers[t] || []).forEach(f => {
+      if (!visited.has(f)) { visited.add(f); queue.push(f); }
+    }));
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      (importers[current] || []).forEach(f => {
+        if (visited.has(f)) return;
+        visited.add(f);
+        queue.push(f);
+        transitiveDependents.add(toRel(f));
       });
+    }
+
+    if (targetFiles.size === 0) {
+      breakingRiskWarning.push(`\`${targetFileOrSymbol}\` did not match an indexed file or declared symbol; only text references were scanned.`);
     }
 
     // 3. Scan for Route / Symbol Usage References across codebase
@@ -74,7 +72,7 @@ export class ImpactAnalyzer {
 
       if (content.toLowerCase().includes(targetSymbolName)) {
         const relPath = path.relative(repoPath, fact.filePath).replace(/\\/g, '/');
-        if (!directDependents.has(relPath) && relPath.toLowerCase() !== targetNormalized) {
+        if (!directDependents.has(relPath) && !targetFiles.has(fact.filePath) && relPath.toLowerCase() !== targetNormalized) {
           affectedRoutes.add(relPath);
         }
       }

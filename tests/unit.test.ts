@@ -15,7 +15,9 @@ import { ContractDriftDetector } from '../src/microservices/contractDrift.js';
 import { PageRankCalculator } from '../src/graph/pageRank.js';
 import { DenseVectorEngine } from '../src/semantic/denseVectorEngine.js';
 import { DashboardGenerator } from '../src/ui/dashboardGenerator.js';
+import { ImportResolver } from '../src/graph/importResolver.js';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as assert from 'assert';
 
@@ -174,4 +176,69 @@ assert.ok(dashboardHTML.includes('graph TD'), 'Dashboard should contain Mermaid 
 assert.ok(dashboardHTML.includes('mermaid.initialize'), 'Dashboard should initialize Mermaid');
 console.log(`   ✅ Interactive Mermaid Dashboard generated at: ${dashboardPath}`);
 
-console.log('\n🎉 ALL 18 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
+// Test 19: Import Resolution Graph (ESM imports, tsconfig aliases, cycles, impact)
+console.log('1️⃣9️⃣ Testing Import Resolver & Resolved Dependency Graph...');
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-trainer-imports-'));
+const writeFixture = (rel: string, content: string) => {
+  const abs = path.join(fixtureRoot, rel);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, content, 'utf8');
+};
+writeFixture('tsconfig.json', `{
+  // comments and trailing commas are allowed in tsconfig
+  "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] }, "homepage": "https://example.test/*" },
+}`);
+writeFixture('src/app/page.tsx', `import React from 'react';
+import {
+  getLinks,
+  createLink
+} from '@/store/links';
+import type { Link } from '../types';
+export default function Page() { return getLinks(); }
+`);
+writeFixture('src/store/links.ts', `import { api } from '../api/client.js';
+export * from './helpers';
+const legacy = require('./legacy');
+export async function getLinks() { const lazy = await import('./lazy'); return api('/api/links'); }
+`);
+writeFixture('src/store/helpers/index.ts', `import { getLinks } from '../links';
+export const refresh = () => getLinks();
+`);
+writeFixture('src/store/legacy.cjs', `module.exports = {};\n`);
+writeFixture('src/store/lazy.ts', `export const lazy = true;\n`);
+writeFixture('src/api/client.ts', `export function api(url: string) { return fetch(url); }\n`);
+writeFixture('src/types.ts', `export interface Link { id: string }\n`);
+writeFixture('py/pkg/__init__.py', '');
+writeFixture('py/pkg/a.py', `from .b import thing\nimport os\n`);
+writeFixture('py/pkg/b.py', `thing = 1\n`);
+
+try {
+  const fixtureFacts = ASTExtractor.scanDirectory(fixtureRoot);
+  const abs = (rel: string) => path.join(fixtureRoot, rel);
+  const pageFact = fixtureFacts.find(f => f.filePath === abs('src/app/page.tsx'));
+  assert.ok(pageFact, 'Fixture page should be indexed');
+  assert.deepStrictEqual([...pageFact.importedModules].sort(), ['../types', '@/store/links', 'react'], 'Should extract multi-line, type-only and default ESM imports');
+
+  const importGraph = ImportResolver.buildImportGraph(fixtureRoot, fixtureFacts);
+  assert.deepStrictEqual([...importGraph[abs('src/app/page.tsx')]].sort(), [abs('src/store/links.ts'), abs('src/types.ts')].sort(), 'Should resolve tsconfig alias and relative import, dropping external packages');
+  assert.deepStrictEqual([...importGraph[abs('src/store/links.ts')]].sort(), [
+    abs('src/api/client.ts'), abs('src/store/helpers/index.ts'), abs('src/store/lazy.ts'), abs('src/store/legacy.cjs')
+  ].sort(), 'Should resolve .js -> .ts, index files, re-exports, require() and dynamic import()');
+  assert.deepStrictEqual(importGraph[abs('py/pkg/a.py')], [abs('py/pkg/b.py')], 'Should resolve Python relative imports');
+
+  const cycles = CallGraphAnalyzer.findImportCycles(importGraph);
+  assert.strictEqual(cycles.length, 1, 'Should detect exactly one import cycle');
+  assert.deepStrictEqual([...cycles[0]].sort(), [abs('src/store/helpers/index.ts'), abs('src/store/links.ts')].sort());
+
+  const fixtureImpact = ImpactAnalyzer.analyzeImpact(fixtureRoot, 'src/api/client.ts');
+  assert.deepStrictEqual(fixtureImpact.directDependents, ['src/store/links.ts'], 'Only the real importer is a direct dependent');
+  assert.deepStrictEqual([...fixtureImpact.transitiveDependents].sort(), ['src/app/page.tsx', 'src/store/helpers/index.ts'], 'Transitive dependents follow the reverse import graph');
+
+  const symbolImpact = ImpactAnalyzer.analyzeImpact(fixtureRoot, 'api');
+  assert.deepStrictEqual(symbolImpact.directDependents, ['src/store/links.ts'], 'Symbol targets resolve to their declaring file');
+  console.log(`   ✅ Resolved ${Object.values(importGraph).reduce((n, t) => n + t.length, 0)} import edges, ${cycles.length} cycle, impact traced through aliases.`);
+} finally {
+  fs.rmSync(fixtureRoot, { recursive: true, force: true });
+}
+
+console.log('\n🎉 ALL 19 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
