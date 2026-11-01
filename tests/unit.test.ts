@@ -18,6 +18,7 @@ import { DashboardGenerator } from '../src/ui/dashboardGenerator.js';
 import { ImportResolver } from '../src/graph/importResolver.js';
 import { GitIgnoreRules } from '../src/extractors/gitignore.js';
 import { IntentClassifier } from '../src/classifier/intentClassifier.js';
+import { TextNormalizer } from '../src/semantic/textNormalizer.js';
 import { DuplicationScanner } from '../src/quality/duplicationScanner.js';
 import { ArchitectureDiagramBuilder } from '../src/graph/architectureDiagram.js';
 import { DiffParser } from '../src/review/diffParser.js';
@@ -629,4 +630,53 @@ try {
   fs.rmSync(qualityFixture, { recursive: true, force: true });
 }
 
-console.log('\n🎉 ALL 25 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
+// Test 26: Stemming, query stopwords, tokenizer-versioned index, nested checkouts
+console.log('2️⃣6️⃣ Testing Stemming, Query Stopwords & Index Scope...');
+const sameStem = (...words: string[]) => new Set(words.map(w => TextNormalizer.stem(w))).size === 1;
+assert.ok(sameStem('resolve', 'resolver', 'resolved', 'resolution'), 'resolve family');
+assert.ok(sameStem('duplicate', 'duplicated', 'duplication', 'duplicates'), 'duplicate family');
+assert.ok(sameStem('classify', 'classifier', 'classification'), 'classify family');
+assert.ok(sameStem('name', 'names', 'naming'), 'name family');
+assert.ok(sameStem('map', 'mapped', 'mapping'), 'doubled consonant family');
+assert.ok(!sameStem('class', 'call') && TextNormalizer.stem('status') === 'status' && TextNormalizer.stem('classes') === 'class');
+assert.deepStrictEqual(TextNormalizer.words('parseHTTPRequest api_key my-file'), ['parse', 'http', 'request', 'api', 'key', 'my', 'file']);
+assert.deepStrictEqual(TextNormalizer.tokenizeQuery('how does import resolution work'), ['import', 'resolv']);
+assert.ok(TextNormalizer.tokenizeQuery('how does it work').length > 0, 'An all-stopword query still searches something');
+const reposUnderTests = path.join(os.tmpdir(), 'tests', 'my-repo');
+assert.strictEqual(SemanticSearchEngine.classifyKind(path.join(reposUnderTests, 'tests', 'cart.spec.ts'), reposUnderTests), 'test');
+assert.strictEqual(SemanticSearchEngine.classifyKind(path.join(reposUnderTests, 'src', 'cart.ts'), reposUnderTests), 'code', 'A repo cloned under a tests/ folder is not all tests');
+
+const stemFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-trainer-stem-'));
+const writeStem = (rel: string, content: string) => {
+  fs.mkdirSync(path.dirname(path.join(stemFixture, rel)), { recursive: true });
+  fs.writeFileSync(path.join(stemFixture, rel), content, 'utf8');
+};
+try {
+  writeStem('src/importResolver.ts', 'export class ImportResolver {\n  resolve(specifier: string) { return this.resolveRelative(specifier); }\n  resolveRelative(spec: string) { return spec; }\n}\n');
+  writeStem('tsconfig.json', '{ "compilerOptions": { "moduleResolution": "NodeNext", "module": "NodeNext" } }\n');
+  writeStem('src/howItWorks.ts', 'export const how = "how does it work";\nexport const does = "does work";\n');
+  // A git worktree inside the repo, and a folder excluded only via .git/info/exclude
+  writeStem('.claude/worktrees/copy/.git', 'gitdir: elsewhere\n');
+  writeStem('.claude/worktrees/copy/src/importResolver.ts', 'export class ImportResolver { resolve() {} }\n');
+  writeStem('.git/info/exclude', 'local-only/\n');
+  writeStem('local-only/notes.ts', 'export const resolution = 1;\n');
+
+  const scope = ASTExtractor.listSourceFiles(stemFixture).map(e => path.relative(stemFixture, e.filePath).replace(/\\/g, '/')).sort();
+  assert.deepStrictEqual(scope, ['src/howItWorks.ts', 'src/importResolver.ts', 'tsconfig.json'], 'Nested checkouts and .git/info/exclude paths are not indexed');
+
+  const ranked = SemanticSearchEngine.search(stemFixture, 'how does import resolution work', 5).map(h => path.relative(stemFixture, h.filePath).replace(/\\/g, '/'));
+  assert.strictEqual(ranked[0], 'src/importResolver.ts', `Stemmed query should find the resolver first, got ${ranked.join(', ')}`);
+
+  // An index written by the previous tokenizer is rebuilt rather than matched against stemmed queries
+  const storePath = path.join(stemFixture, '.codebase', 'embeddings.json');
+  const stored = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  stored.meta.tokenizer = 1;
+  fs.writeFileSync(storePath, JSON.stringify(stored), 'utf8');
+  assert.strictEqual(SemanticSearchEngine.ensureFreshIndex(stemFixture).fullRebuild, true);
+  assert.strictEqual(SemanticSearchEngine.ensureFreshIndex(stemFixture).fullRebuild, false);
+  console.log(`   ✅ Word families share stems; "${ranked[0]}" ranks first; nested checkouts excluded; old-tokenizer index rebuilt.`);
+} finally {
+  fs.rmSync(stemFixture, { recursive: true, force: true });
+}
+
+console.log('\n🎉 ALL 26 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');

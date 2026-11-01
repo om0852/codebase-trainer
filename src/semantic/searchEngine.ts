@@ -6,6 +6,8 @@ import { IndexEncryption, EncryptedPayload } from '../storage/encryption.js';
 import { IndexStore } from '../storage/db.js';
 import { PageRankCalculator, PageRankResult } from '../graph/pageRank.js';
 import { DenseVectorEngine } from './denseVectorEngine.js';
+import { TextNormalizer, TOKENIZER_VERSION } from './textNormalizer.js';
+import { IntentClassifier } from '../classifier/intentClassifier.js';
 
 export interface CodeChunk {
   id: string;
@@ -18,10 +20,11 @@ export interface CodeChunk {
   embedding?: number[];
 }
 
-export type ChunkKind = 'code' | 'doc' | 'config';
+export type ChunkKind = 'code' | 'test' | 'doc' | 'config';
 
-// Docs often restate code in plain words and win on keyword overlap; keep them findable but rank code first
-export const KIND_SCORE_WEIGHT: Record<ChunkKind, number> = { code: 1.0, config: 1.0, doc: 0.5 };
+// Docs and test fixtures often restate code in plain words and win on keyword overlap; keep them
+// findable but rank the implementation first
+export const KIND_SCORE_WEIGHT: Record<ChunkKind, number> = { code: 1.0, config: 1.0, test: 0.6, doc: 0.5 };
 const DOC_EXTENSIONS = ['.md', '.markdown', '.mdx', '.txt', '.rst'];
 const CONFIG_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini'];
 
@@ -50,6 +53,8 @@ export interface IndexMeta {
   refreshedAt: string;
   // Repo-relative POSIX path -> stats at the time the file was chunked
   files: Record<string, IndexedFileStat>;
+  // TOKENIZER_VERSION the stored chunk tokens were produced with
+  tokenizer?: number;
 }
 
 interface IndexStorePayload {
@@ -86,18 +91,24 @@ export interface CompactSearchResult {
 }
 
 export class SemanticSearchEngine {
-  public static classifyKind(filePath: string): ChunkKind {
+  public static classifyKind(filePath: string, repoPath?: string): ChunkKind {
     const ext = path.extname(filePath).toLowerCase();
     if (DOC_EXTENSIONS.includes(ext)) return 'doc';
     if (CONFIG_EXTENSIONS.includes(ext)) return 'config';
-    return 'code';
+    // Folder rules (tests/, __tests__/) need the repo-relative path; without a repo root, use the filename only
+    const isTest = repoPath
+      ? IntentClassifier.isTestFile(path.relative(repoPath, filePath))
+      : /\.(test|spec)\.[a-z]+$/i.test(filePath);
+    return isTest ? 'test' : 'code';
   }
 
+  // Stemmed tokens for indexed text; queries go through tokenizeQuery, which also drops question words
   public static tokenize(text: string): string[] {
-    // Split camelCase and PascalCase
-    const expanded = text.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-    const words = expanded.replace(/[^a-z0-9_\s]/g, ' ').split(/\s+/);
-    return words.filter(w => w.length > 1);
+    return TextNormalizer.tokenize(text);
+  }
+
+  public static tokenizeQuery(query: string): string[] {
+    return TextNormalizer.tokenizeQuery(query);
   }
 
   public static chunkFile(filePath: string, repoPath?: string): CodeChunk[] {
@@ -209,7 +220,7 @@ export class SemanticSearchEngine {
     this.cachedPageRank.delete(path.resolve(repoPath));
     const allChunks: CodeChunk[] = [];
     const now = new Date().toISOString();
-    const meta: IndexMeta = { builtAt: now, refreshedAt: now, files: {} };
+    const meta: IndexMeta = { builtAt: now, refreshedAt: now, files: {}, tokenizer: TOKENIZER_VERSION };
 
     ASTExtractor.listSourceFiles(repoPath).forEach(entry => {
       allChunks.push(...this.chunkFile(entry.filePath, repoPath));
@@ -266,7 +277,8 @@ export class SemanticSearchEngine {
   /**
    * Compares the files on disk with the stats recorded at index time. Changed, new and deleted files are
    * re-chunked in place (unless CODEBASE_TRAINER_AUTO_REFRESH=0, in which case they are reported as stale).
-   * A missing index, or one written before stats were recorded, is rebuilt in full.
+   * A missing index, one written before stats were recorded, or one whose tokens came from an older
+   * tokenizer is rebuilt in full.
    */
   public static ensureFreshIndex(repoPath: string, autoRefresh: boolean = process.env.CODEBASE_TRAINER_AUTO_REFRESH !== '0'): IndexFreshness {
     return this.refreshStore(repoPath, autoRefresh).index;
@@ -292,7 +304,7 @@ export class SemanticSearchEngine {
         chunks: []
       };
     }
-    if (!payload || !payload.meta) {
+    if (!payload || !payload.meta || payload.meta.tokenizer !== TOKENIZER_VERSION) {
       this.buildIndex(repoPath);
       const rebuilt = this.readStore(repoPath).payload;
       return { index: freshness(rebuilt?.meta, { fullRebuild: true }), chunks: rebuilt?.chunks || [] };
@@ -344,12 +356,16 @@ export class SemanticSearchEngine {
   }
 
   private static rankChunks(repoPath: string, chunks: CodeChunk[], query: string, topK: number): SearchResult[] {
-    const queryTokens = this.tokenize(query);
+    const queryTokens = this.tokenizeQuery(query);
     if (queryTokens.length === 0 || chunks.length === 0) return [];
 
-    const queryEmbedding = DenseVectorEngine.embedText(query);
+    // Embed the same content words BM25 uses, so "how does X work" does not favour text about how things work
+    const queryEmbedding = DenseVectorEngine.embedText(TextNormalizer.queryContentWords(query).join(' '));
     // Check exact symbol matches from query terms (e.g., function/class name)
-    const exactSymbols = query.split(/[\s,()]+/).map(s => s.trim()).filter(s => /^[a-zA-Z0-9_$]{2,}$/.test(s));
+    // Question words ("how", "does") are not symbol lookups unless the query is nothing else
+    const symbolCandidates = query.split(/[\s,()]+/).map(s => s.trim()).filter(s => /^[a-zA-Z0-9_$]{2,}$/.test(s));
+    const contentSymbols = symbolCandidates.filter(s => !TextNormalizer.isQueryStopword(s));
+    const exactSymbols = contentSymbols.length > 0 ? contentSymbols : symbolCandidates;
 
     const N = chunks.length;
     let totalLen = 0;
@@ -429,7 +445,7 @@ export class SemanticSearchEngine {
       const hasRelevance = bm25Score > 0 || symbolBoost > 0 || vectorBoost > 0;
       const prBoost = hasRelevance ? Math.min(pageRankScore * 0.75, 2.5) : 0;
 
-      const kind = this.classifyKind(chunk.filePath);
+      const kind = this.classifyKind(chunk.filePath, repoPath);
       const totalScore = (bm25Score + symbolBoost + vectorBoost + prBoost) * KIND_SCORE_WEIGHT[kind];
       const matchType: SearchResult['matchType'] = symbolBoost > 0 
         ? (bm25Score > 0 || vectorBoost > 0 ? 'hybrid' : 'ast-symbol')
@@ -460,7 +476,7 @@ export class SemanticSearchEngine {
    * lines that best match the query, with startLine/endLine adjusted to the narrowed window.
    */
   public static compactResults(repoPath: string, query: string, hits: SearchResult[], maxLines: number = 12): CompactSearchResult[] {
-    const queryTokens = new Set(this.tokenize(query));
+    const queryTokens = new Set(this.tokenizeQuery(query));
 
     return hits.map(hit => {
       const lines = hit.snippet.split(/\r?\n/);

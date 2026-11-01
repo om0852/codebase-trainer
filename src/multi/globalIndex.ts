@@ -4,6 +4,7 @@ import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
 import { IndexStore } from '../storage/db.js';
 import { SemanticSearchEngine, CodeChunk, SearchResult, KIND_SCORE_WEIGHT } from '../semantic/searchEngine.js';
+import { TOKENIZER_VERSION } from '../semantic/textNormalizer.js';
 
 export interface GlobalWorkspaceModel {
   totalRepos: number;
@@ -91,7 +92,7 @@ export class GlobalIndexManager {
 
     fs.writeFileSync(
       path.join(globalCodebaseDir, 'global_embeddings.json'),
-      JSON.stringify({ chunks: allCombinedChunks }, null, 2),
+      JSON.stringify({ tokenizer: TOKENIZER_VERSION, chunks: allCombinedChunks }, null, 2),
       'utf8'
     );
 
@@ -109,18 +110,20 @@ export class GlobalIndexManager {
       this.scanAllRepositories(parentDir);
     }
 
-    let data: { chunks: CodeChunk[] };
+    let data: { chunks: CodeChunk[]; tokenizer?: number };
     try {
       data = JSON.parse(fs.readFileSync(globalEmbeddingsPath, 'utf8'));
     } catch {
       return [];
     }
 
-    const queryTokens = SemanticSearchEngine.tokenize(query);
+    const queryTokens = SemanticSearchEngine.tokenizeQuery(query);
     if (queryTokens.length === 0) return [];
+    // Stored tokens from an older tokenizer would never match stemmed query tokens
+    const storedTokensUsable = data.tokenizer === TOKENIZER_VERSION;
 
     const results: SearchResult[] = data.chunks.map(chunk => {
-      const chunkTokens = chunk.tokens || SemanticSearchEngine.tokenize(chunk.content);
+      const chunkTokens = (storedTokensUsable && chunk.tokens) || SemanticSearchEngine.tokenize(chunk.content);
       const chunkTokenSet = new Set(chunkTokens);
 
       let matchCount = 0;

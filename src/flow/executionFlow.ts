@@ -49,7 +49,7 @@ export class ExecutionFlowTracer {
   public static traceFlow(repoPath: string, featureQuery: string): ExecutionFlowResult {
     const toRel = (f: string) => path.relative(repoPath, f).replace(/\\/g, '/');
     const hits = SemanticSearchEngine.search(repoPath, featureQuery, 15)
-      .filter(h => h.kind === 'code' && !IntentClassifier.isTestFile(toRel(h.filePath)));
+      .filter(h => h.kind === 'code');
 
     // Seed files: the distinct code files search ranks highest for the query
     const seeds: string[] = [];

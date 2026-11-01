@@ -8,20 +8,24 @@ interface IgnoreRule {
 }
 
 /**
- * Minimal .gitignore matcher for the repo-root .gitignore: comments, `!` negation (last match wins),
- * trailing `/` (directories only), anchored patterns (containing `/`), and `*`, `**`, `?` globs.
+ * Minimal .gitignore matcher for the repo-root .gitignore and .git/info/exclude: comments, `!` negation
+ * (last match wins), trailing `/` (directories only), anchored patterns (containing `/`), and `*`, `**`, `?` globs.
  */
 export class GitIgnoreRules {
   private constructor(private readonly rules: IgnoreRule[]) {}
 
   public static load(repoPath: string): GitIgnoreRules {
-    const file = path.join(repoPath, '.gitignore');
-    if (!fs.existsSync(file)) return new GitIgnoreRules([]);
-    try {
-      return GitIgnoreRules.parse(fs.readFileSync(file, 'utf8'));
-    } catch {
-      return new GitIgnoreRules([]);
-    }
+    // info/exclude first so the repo's .gitignore (read later) wins on conflicting rules, as in git
+    const content = [path.join(repoPath, '.git', 'info', 'exclude'), path.join(repoPath, '.gitignore')]
+      .map(file => {
+        try {
+          return fs.readFileSync(file, 'utf8');
+        } catch {
+          return '';
+        }
+      })
+      .join('\n');
+    return GitIgnoreRules.parse(content);
   }
 
   public static parse(content: string): GitIgnoreRules {

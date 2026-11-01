@@ -241,7 +241,9 @@ export class ASTExtractor {
         const fullPath = path.join(currentDir, entry.name);
         const relPath = path.relative(dirPath, fullPath);
         if (entry.isDirectory()) {
-          if (!IGNORED_DIRS.includes(entry.name) && !gitignore.ignores(relPath, true)) {
+          // A nested repository or git worktree (its own `.git` file or folder) is a separate checkout, not part of this one
+          const nestedCheckout = fs.existsSync(path.join(fullPath, '.git'));
+          if (!IGNORED_DIRS.includes(entry.name) && !gitignore.ignores(relPath, true) && !nestedCheckout) {
             walk(fullPath);
           }
         } else if (entry.isFile()) {
