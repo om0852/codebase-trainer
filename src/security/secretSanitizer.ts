@@ -1,6 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 export interface SanitizeResult {
   sanitizedText: string;
   redactedCount: number;
@@ -8,67 +5,6 @@ export interface SanitizeResult {
 }
 
 export class SecretSanitizer {
-  private static defaultIgnoredFiles = [
-    '.env',
-    '.env.local',
-    '.env.development',
-    '.env.production',
-    '.env.test',
-    '*.pem',
-    '*.key',
-    '*.pkcs12',
-    '*.pfx',
-    'id_rsa',
-    'id_ed25519',
-    'credentials.json',
-    'serviceAccountKey.json',
-    'client_secret*.json',
-    '*.p8'
-  ];
-
-  /**
-   * Loads user-defined ignore patterns from .codebaseignore if present,
-   * plus standard enterprise credential ignore patterns.
-   */
-  public static loadIgnorePatterns(repoPath: string): string[] {
-    const patterns = [...this.defaultIgnoredFiles];
-    const ignoreFile = path.join(repoPath, '.codebaseignore');
-    if (fs.existsSync(ignoreFile)) {
-      try {
-        const content = fs.readFileSync(ignoreFile, 'utf8');
-        content
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(line => line && !line.startsWith('#'))
-          .forEach(p => patterns.push(p));
-      } catch {
-        // ignore read error
-      }
-    }
-    return patterns;
-  }
-
-  /**
-   * Tests if a file path matches any .codebaseignore or secret file patterns.
-   */
-  public static isIgnoredFile(filePath: string, repoPath: string): boolean {
-    const rel = path.relative(repoPath, filePath).replace(/\\/g, '/');
-    const baseName = path.basename(filePath);
-    const patterns = this.loadIgnorePatterns(repoPath);
-
-    return patterns.some(pattern => {
-      if (pattern.startsWith('*.')) {
-        const ext = pattern.slice(1);
-        return baseName.endsWith(ext);
-      }
-      if (pattern.endsWith('*')) {
-        const prefix = pattern.slice(0, -1);
-        return baseName.startsWith(prefix);
-      }
-      return rel === pattern || baseName === pattern || rel.includes('/' + pattern);
-    });
-  }
-
   /**
    * Sanitizes high-risk secrets, tokens, private keys, and passwords
    * in code chunks before saving to vector embeddings or context packs.

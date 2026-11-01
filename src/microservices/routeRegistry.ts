@@ -25,13 +25,8 @@ export class RouteRegistryManager {
     const fetchRouteRegex = /(?:fetch|axios\.(?:get|post|put|delete)|http:\/\/[a-zA-Z0-9_\-]+)\s*\(\s*['"]([^'"]+)['"]/ig;
 
     facts.forEach(fact => {
-      if (!fs.existsSync(fact.filePath)) return;
-      let content = '';
-      try {
-        content = fs.readFileSync(fact.filePath, 'utf8');
-      } catch {
-        return;
-      }
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      if (content === null) return;
 
       // Extract Exposed Routes
       let match;
