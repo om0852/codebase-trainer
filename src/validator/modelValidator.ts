@@ -27,22 +27,16 @@ export class ModelValidator {
     const totalFiles = facts.length;
     const coveragePercent = Math.min(100, Math.round((totalFiles / (totalFiles + 1)) * 100));
 
-    // Verify Export Style Match
-    let namedExports = 0;
-    let defaultExports = 0;
-    facts.forEach(f => {
-      if (f.exportStyle === 'named') namedExports++;
-      if (f.exportStyle === 'default') defaultExports++;
-    });
-
+    // Verify Export Style Match (same measurement the miner uses, so the two never disagree)
     let isSelfCorrected = false;
     if (conventions) {
-      const actualPreferredExport = namedExports >= defaultExports ? 'named' : 'default';
-      if (conventions.rules.structural.exportStyle !== actualPreferredExport) {
-        conventions.rules.structural.exportStyle = actualPreferredExport;
+      const actual = ConventionMiner.measureExportStyle(repoPath, facts);
+      if (conventions.rules.structural.exportStyle !== actual.style) {
+        conventions.rules.structural.exportStyle = actual.style;
+        conventions.evidence = { ...(conventions.evidence || {}), 'structural.exportStyle': actual.evidence };
         ConventionMiner.saveConventions(repoPath, conventions);
         isSelfCorrected = true;
-        recommendations.push(`Self-corrected exportStyle convention to \`${actualPreferredExport}\` based on AST verification.`);
+        recommendations.push(`Self-corrected exportStyle convention to \`${actual.style}\` (${actual.evidence}).`);
       }
     }
 

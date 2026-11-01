@@ -94,8 +94,8 @@ export class ASTExtractor {
     let defaultExports = 0;
     if (['typescript', 'javascript'].includes(language)) {
       lines.forEach((line: string) => {
-        if (/export\s+default/.test(line)) defaultExports++;
-        else if (/export\s+(const|function|class|interface|type|enum)/.test(line)) namedExports++;
+        if (/^\s*export\s+default\b/.test(line)) defaultExports++;
+        else if (/^\s*export\s+(?:(?:declare|abstract|async)\s+)*(?:const|let|var|function|class|interface|type|enum)\b|^\s*export\s*\{/.test(line)) namedExports++;
       });
     } else if (language === 'go') {
       lines.forEach((line: string) => {
@@ -209,7 +209,9 @@ export class ASTExtractor {
       filePath,
       language,
       constantsPlacement,
+      constantCounts: { top: constTopCount, inline: constInlineCount },
       exportStyle,
+      exportCounts: { named: namedExports, default: defaultExports },
       hasTypeAnnotations,
       typeCastingCount,
       importedModules: Array.from(new Set(importedModules)),

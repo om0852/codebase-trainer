@@ -91,11 +91,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     const repoPath = resolveRepoPath();
 
     if (uri === 'codebase://conventions') {
-      let conventions = ConventionMiner.loadConventions(repoPath);
-      if (!conventions) {
-        const facts = ASTExtractor.scanDirectory(repoPath);
-        conventions = ConventionMiner.generateConventions(repoPath, facts);
-      }
+      const conventions = ConventionMiner.loadOrGenerate(repoPath);
       return {
         contents: [
           {
@@ -225,7 +221,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'get_codebase_conventions',
-          description: 'Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.',
+          description: 'Fetch conventions learned from this codebase (naming per symbol kind, export style, typing, docs, git norms) with the counts behind each value under `evidence`, plus role counts and top directories. Rules marked source: default ship with the tool and were not learned.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -424,13 +420,8 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     }
 
     if (name === 'get_codebase_conventions') {
-      let conventions = ConventionMiner.loadConventions(repoPath);
-      if (!conventions) {
-        const facts = ASTExtractor.scanDirectory(repoPath);
-        SemanticSearchEngine.buildIndex(repoPath);
-        conventions = ConventionMiner.generateConventions(repoPath, facts);
-        ConventionMiner.saveConventions(repoPath, conventions);
-      }
+      // The search index builds itself on first search, so only conventions need generating here
+      const conventions = ConventionMiner.loadOrGenerate(repoPath);
       return {
         content: [
           {

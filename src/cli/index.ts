@@ -64,11 +64,14 @@ program
     if (options.encrypt) {
       console.log(`🔒 Vector store encrypted at: ${path.join(repoPath, '.codebase', 'embeddings.json')}`);
     }
+    const evidence = conventions.evidence || {};
     console.log(`\nModel Summary:`);
-    console.log(`  - Constants placement: ${conventions.rules.structural.constantsPlacement}`);
-    console.log(`  - Export style: ${conventions.rules.structural.exportStyle}`);
-    console.log(`  - Type annotations required: ${conventions.rules.structural.typeAnnotationRequirement}`);
-    console.log(`  - Git commit format: ${conventions.rules.git.commitFormat}`);
+    console.log(`  - Naming: ${conventions.rules.structural.namingConvention}`);
+    console.log(`  - Export style: ${conventions.rules.structural.exportStyle} (${evidence['structural.exportStyle'] || 'no evidence'})`);
+    console.log(`  - Constants placement: ${conventions.rules.structural.constantsPlacement} (${evidence['structural.constantsPlacement'] || 'no evidence'})`);
+    console.log(`  - Type annotations required: ${conventions.rules.structural.typeAnnotationRequirement} (${evidence['structural.typeAnnotationRequirement'] || 'no evidence'})`);
+    console.log(`  - Documentation: ${conventions.rules.documentation.commentStyle}`);
+    console.log(`  - Git: ${conventions.rules.git.commitFormat}; branches: ${conventions.rules.git.branchNaming}`);
   });
 
 program

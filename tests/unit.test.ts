@@ -17,6 +17,7 @@ import { DenseVectorEngine } from '../src/semantic/denseVectorEngine.js';
 import { DashboardGenerator } from '../src/ui/dashboardGenerator.js';
 import { ImportResolver } from '../src/graph/importResolver.js';
 import { GitIgnoreRules } from '../src/extractors/gitignore.js';
+import { IntentClassifier } from '../src/classifier/intentClassifier.js';
 import { DiffParser } from '../src/review/diffParser.js';
 import { DiffChecker } from '../src/review/diffChecker.js';
 import { execSync } from 'child_process';
@@ -525,4 +526,61 @@ try {
   fs.rmSync(diffFixture, { recursive: true, force: true });
 }
 
-console.log('\n🎉 ALL 23 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
+// Test 24: Conventions learned from code, with evidence and segment-based roles
+console.log('2️⃣4️⃣ Testing Learned Conventions & Role Classification...');
+const roleOf = (rel: string) => IntentClassifier.classifyPath(rel).role;
+assert.strictEqual(roleOf('middleware.ts'), 'middleware');
+assert.strictEqual(roleOf('app/settings/page.tsx'), 'page');
+assert.strictEqual(roleOf('app/api/keys/route.ts'), 'controller_route');
+assert.strictEqual(roleOf('hooks/useApiKeys.ts'), 'hook');
+assert.strictEqual(roleOf('store/keysStore.ts'), 'store');
+assert.strictEqual(roleOf('components/KeyRow.tsx'), 'ui_component');
+assert.strictEqual(roleOf('src/validator/modelValidator.ts'), 'unknown', 'Substring "model" must not make a data model');
+assert.strictEqual(roleOf('src/microservices/routeRegistry.ts'), 'unknown', 'Substring "route" must not make a route handler');
+assert.strictEqual(roleOf('src/latest.ts'), 'unknown', 'Substring "test" must not make a test');
+
+const convFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-trainer-conv-'));
+const writeConv = (rel: string, content: string) => {
+  fs.mkdirSync(path.dirname(path.join(convFixture, rel)), { recursive: true });
+  fs.writeFileSync(path.join(convFixture, rel), content, 'utf8');
+};
+try {
+  writeConv('middleware.ts', 'export function middleware(req: Request) { return req; }\n');
+  writeConv('app/settings/page.tsx', 'export default function SettingsPage() { return null; }\n');
+  writeConv('app/api/keys/route.ts', 'export async function GET() { return Response.json([]); }\n');
+  writeConv('hooks/useApiKeys.ts', 'export function useApiKeys() { return []; }\n');
+  writeConv('store/keysStore.ts', 'const MAX_KEYS = 10;\nexport interface KeyRecord { id: string }\nexport async function revokeApiKey(keyId: string) { return keyId; }\n');
+  writeConv('components/KeyRow.tsx', 'export default function KeyRow() { return null; }\n');
+  writeConv('lib/format-date.ts', 'const DEFAULT_LOCALE = "en";\nexport function formatDate(value: Date) { return value.toISOString(); }\n');
+  writeConv('lib/parse-query.ts', 'export type QueryParams = Record<string, string>;\nexport function parseQuery(input: string) { return input; }\n');
+  writeConv('lib/build-url.ts', 'const BASE_PATH = "/api";\nexport function buildUrl(pathName: string) { return BASE_PATH + pathName; }\n');
+  writeConv('lib/retry-request.ts', 'const RETRY_LIMIT = 3;\nexport class RetryPolicy {}\nexport const retryRequest = async (attempt: number) => attempt < RETRY_LIMIT;\n');
+  writeConv('lib/api-client.ts', 'const REQUEST_TIMEOUT_MS = 5000;\nexport class ApiClient {}\nexport function sendRequest(url: string) { return url; }\n/** Shared error type */\nexport class ApiError extends Error {}\n');
+  writeConv('.github/pull_request_template.md', '## What changed\n\n## How to test\n');
+
+  const learned = ConventionMiner.generateConventions(convFixture, ASTExtractor.scanDirectory(convFixture));
+  const naming = learned.rules.structural.naming!;
+  assert.strictEqual(naming.functions?.style, 'camelCase');
+  assert.strictEqual(naming.types?.style, 'PascalCase');
+  assert.strictEqual(naming.constants?.style, 'UPPER_SNAKE_CASE');
+  assert.strictEqual(naming.files?.style, 'kebab-case', 'File naming should be learned from the files, not assumed');
+  assert.ok(learned.rules.structural.namingConvention.includes('functions camelCase'));
+  assert.strictEqual(learned.rules.structural.exportStyle, 'named', 'Framework default exports must not count against named exports');
+  assert.ok(learned.evidence?.['structural.exportStyle'].includes('1 default-only'), learned.evidence?.['structural.exportStyle']);
+  assert.deepStrictEqual(learned.rules.git.prTemplateSections, ['What changed', 'How to test'], 'PR sections come from the template, not a hard-coded list');
+  assert.ok(learned.rules.customRules.every(r => r.source === 'default'), 'Shipped rules must be labelled as defaults');
+  const roles = learned.architecture!.roles;
+  assert.ok(roles.middleware?.examples.includes('middleware.ts') && roles.page?.count === 1 && roles.hook?.count === 1 && roles.store?.count === 1);
+  assert.ok(!('architecturalMap' in learned), 'The per-file role map is replaced by role counts');
+
+  // Old-format conventions (no evidence) are regenerated instead of served as-is
+  ConventionMiner.saveConventions(convFixture, { ...learned, evidence: undefined, rules: { ...learned.rules, structural: { ...learned.rules.structural, namingConvention: 'camelCase variables, PascalCase classes/interfaces' } } });
+  const reloaded = ConventionMiner.loadOrGenerate(convFixture);
+  assert.ok(reloaded.evidence && reloaded.rules.structural.namingConvention.includes('kebab-case'), 'Legacy conventions should be regenerated');
+  assert.strictEqual(ModelValidator.validateAndSelfCorrect(convFixture).isSelfCorrected, false, 'Validator and miner must agree on export style');
+  console.log(`   ✅ Learned: ${learned.rules.structural.namingConvention}.`);
+} finally {
+  fs.rmSync(convFixture, { recursive: true, force: true });
+}
+
+console.log('\n🎉 ALL 24 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');

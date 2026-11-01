@@ -6,6 +6,7 @@ import { ImportResolver } from '../graph/importResolver.js';
 import { CallSiteExtractor } from '../flow/callSites.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
+import { IntentClassifier } from '../classifier/intentClassifier.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
@@ -179,10 +180,9 @@ export class DiffChecker {
       || /\b(?:app|router|server)\.(?:get|post|put|delete|patch)\s*\(\s*['"`]/.test(currentCode)
       || /export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|DELETE|PATCH)\s*\(/.test(currentCode)
     );
-    const isFrameworkDefaultExport = /(^|\/)(page|layout|route|middleware|loading|error|not-found|template)\.(t|j)sx?$/.test(file.filePath)
-      || /(^|\/)pages\//.test(file.filePath) || /\.config\.[cm]?[jt]s$/.test(file.filePath) || /\.(stories|story)\.[jt]sx?$/.test(file.filePath);
+    const isFrameworkDefaultExport = IntentClassifier.requiresDefaultExport(file.filePath);
     const consoleLogAccepted = isTest || isCliOrScript || existingCount(/console\.log\(/) > 0;
-    const anyRequired = isTs && (!conventions || conventions.rules.structural.typeAnnotationRequirement);
+    const anyRequired = isTs && (!conventions || conventions.rules.structural.typeAnnotationRequirement === true);
 
     const add = (ruleId: string, severity: FindingSeverity, l: DiffLine, message: string) =>
       findings.push({ ruleId, severity, filePath: file.filePath, line: l.line, message, snippet: l.text.trim().slice(0, 200) });

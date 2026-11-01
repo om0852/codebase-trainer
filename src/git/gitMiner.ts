@@ -6,6 +6,8 @@ export interface GitFact {
   commitFormatPattern: string;
   recentCommitTypes: string[];
   activeBranch: string;
+  // Local and remote-tracking branch names (remote prefix stripped)
+  branchNames: string[];
   uncommittedModifiedFiles: string[];
 }
 
@@ -20,6 +22,7 @@ export class GitMiner {
         commitFormatPattern: 'Unknown (Not a git repository)',
         recentCommitTypes: [],
         activeBranch: 'main',
+        branchNames: [],
         uncommittedModifiedFiles: []
       };
     }
@@ -56,10 +59,18 @@ export class GitMiner {
         .map(line => line.slice(3).trim())
         .filter(Boolean);
 
+      const branchNames = Array.from(new Set(
+        execSync('git for-each-ref --format=%(refname:short) refs/heads refs/remotes', { cwd: repoPath, encoding: 'utf8' })
+          .split(/\r?\n/)
+          .map(b => b.trim().replace(/^(?:origin|upstream)\//, ''))
+          .filter(b => b && b !== 'HEAD' && !b.endsWith('/HEAD') && b !== 'origin')
+      ));
+
       return {
         commitFormatPattern,
         recentCommitTypes: Array.from(commitTypes),
         activeBranch,
+        branchNames,
         uncommittedModifiedFiles
       };
     } catch {
@@ -67,6 +78,7 @@ export class GitMiner {
         commitFormatPattern: 'Default commit style',
         recentCommitTypes: ['feat', 'fix', 'docs'],
         activeBranch: 'main',
+        branchNames: [],
         uncommittedModifiedFiles: []
       };
     }

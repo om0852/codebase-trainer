@@ -6,8 +6,8 @@ import { CallGraphAnalyzer } from '../graph/callGraph.js';
 
 export class OnboardingDocsGenerator {
   public static generateOnboardingGuide(repoPath: string): string {
-    const conventions = ConventionMiner.loadConventions(repoPath);
     const facts = ASTExtractor.scanDirectory(repoPath);
+    const conventions = ConventionMiner.loadOrGenerate(repoPath, facts);
     const graph = CallGraphAnalyzer.analyzeGraph(repoPath);
 
     const repoName = conventions?.codebaseName || path.basename(repoPath);
@@ -26,10 +26,22 @@ Welcome to **${repoName}**! This documentation was generated automatically by **
 ---
 
 ## 📐 Project Conventions Cheat Sheet
-- **Constants Placement**: Defined at **${conventions?.rules.structural.constantsPlacement.toUpperCase()}** of files.
-- **Export Style**: Prefer **${conventions?.rules.structural.exportStyle.toUpperCase()}** exports.
-- **Strict Typing**: ${conventions?.rules.structural.typeAnnotationRequirement ? 'Required' : 'Optional'}.
-- **Git Commit Format**: \`${conventions?.rules.git.commitFormat}\`.
+${conventions ? `- **Naming**: ${conventions.rules.structural.namingConvention}.
+- **Export Style**: ${conventions.rules.structural.exportStyle}${conventions.evidence?.['structural.exportStyle'] ? ` (${conventions.evidence['structural.exportStyle']})` : ''}.
+- **Constants Placement**: ${conventions.rules.structural.constantsPlacement}${conventions.evidence?.['structural.constantsPlacement'] ? ` (${conventions.evidence['structural.constantsPlacement']})` : ''}.
+- **Strict Typing**: ${conventions.rules.structural.typeAnnotationRequirement ? 'Required' : 'Optional'}${conventions.evidence?.['structural.typeAnnotationRequirement'] ? ` (${conventions.evidence['structural.typeAnnotationRequirement']})` : ''}.
+- **Documentation**: ${conventions.rules.documentation.commentStyle}.
+- **Git Commit Format**: \`${conventions.rules.git.commitFormat}\`; branches: ${conventions.rules.git.branchNaming}.` : '- Run `cb-trainer init` to learn this codebase\'s conventions.'}
+
+---
+
+## 🧭 Where Things Live
+${conventions?.architecture ? Object.entries(conventions.architecture.roles)
+  .sort((a, b) => b[1].count - a[1].count)
+  .map(([role, r]) => `- **${role}** (${r.count}): ${r.examples.map(e => `\`${e}\``).join(', ')}`)
+  .join('\n') : ''}
+
+${conventions?.architecture ? `**Largest directories**: ${Object.entries(conventions.architecture.directories).slice(0, 8).map(([d, n]) => `\`${d}\` (${n})`).join(', ')}` : ''}
 
 ---
 
@@ -45,7 +57,9 @@ npx cb-trainer review
 \`\`\`
 `;
 
-    const outPath = path.join(repoPath, '.codebase', 'ONBOARDING.md');
+    const outDir = path.join(repoPath, '.codebase');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    const outPath = path.join(outDir, 'ONBOARDING.md');
     fs.writeFileSync(outPath, guideMarkdown, 'utf8');
     return outPath;
   }
