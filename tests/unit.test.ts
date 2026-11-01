@@ -16,6 +16,7 @@ import { PageRankCalculator } from '../src/graph/pageRank.js';
 import { DenseVectorEngine } from '../src/semantic/denseVectorEngine.js';
 import { DashboardGenerator } from '../src/ui/dashboardGenerator.js';
 import { ImportResolver } from '../src/graph/importResolver.js';
+import { GitIgnoreRules } from '../src/extractors/gitignore.js';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -275,4 +276,58 @@ try {
   fs.rmSync(searchFixture, { recursive: true, force: true });
 }
 
-console.log('\n🎉 ALL 20 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
+// Test 21: .gitignore handling and index freshness (auto-refresh, stale reporting, legacy rebuild)
+console.log('2️⃣1️⃣ Testing .gitignore Rules & Index Freshness...');
+const rules = GitIgnoreRules.parse('# comment\n/generated/\n*.gen.ts\n!keep.gen.ts\ndocs/**/draft.md\n');
+assert.ok(rules.ignores('generated/x.ts', false), 'Anchored directory rule should exclude its contents');
+assert.ok(!rules.ignores('src/generated/x.ts', false), 'Anchored rule should not match nested directories');
+assert.ok(rules.ignores('src/a.gen.ts', false) && !rules.ignores('src/keep.gen.ts', false), 'Negation should re-include a file');
+assert.ok(rules.ignores('docs/a/b/draft.md', false) && rules.ignores('docs/draft.md', false), '** should match zero or more directories');
+
+const freshFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-trainer-fresh-'));
+const writeFresh = (rel: string, content: string) => {
+  fs.mkdirSync(path.dirname(path.join(freshFixture, rel)), { recursive: true });
+  fs.writeFileSync(path.join(freshFixture, rel), content, 'utf8');
+};
+const savedAutoRefresh = process.env.CODEBASE_TRAINER_AUTO_REFRESH;
+try {
+  writeFresh('.gitignore', '/generated/\n*.gen.ts\n');
+  writeFresh('lib/store.ts', 'export function loadStore() { return 1; }\n');
+  writeFresh('generated/client.ts', 'export const generatedClient = 1;\n');
+  writeFresh('src/api.gen.ts', 'export const generatedApi = 1;\n');
+  writeFresh('src/old.ts', 'export const oldThing = 1;\n');
+
+  const listed = ASTExtractor.listSourceFiles(freshFixture).map(e => path.relative(freshFixture, e.filePath).replace(/\\/g, '/')).sort();
+  assert.deepStrictEqual(listed, ['lib/store.ts', 'src/old.ts'], 'lib/ should be indexed and .gitignore exclusions respected');
+
+  // Index written before file stats existed: first check rebuilds it in full
+  fs.mkdirSync(path.join(freshFixture, '.codebase'), { recursive: true });
+  fs.writeFileSync(path.join(freshFixture, '.codebase', 'embeddings.json'), JSON.stringify({ chunks: [] }), 'utf8');
+  const legacy = SemanticSearchEngine.ensureFreshIndex(freshFixture);
+  assert.ok(legacy.fullRebuild && legacy.checkedFiles === 2, 'Legacy index without stats should be rebuilt');
+  assert.strictEqual(SemanticSearchEngine.ensureFreshIndex(freshFixture).refreshedFiles.length, 0, 'Unchanged repo needs no refresh');
+
+  // Edit, add and delete files: the next search picks them up without a manual re-index
+  writeFresh('lib/store.ts', 'export function loadStore() { return revokeWebhookSecret(); }\n');
+  writeFresh('src/webhooks.ts', 'export function revokeWebhookSecret() { return true; }\n');
+  fs.rmSync(path.join(freshFixture, 'src', 'old.ts'));
+  const refreshed = SemanticSearchEngine.searchWithStatus(freshFixture, 'revokeWebhookSecret', 5);
+  assert.deepStrictEqual([...refreshed.index.refreshedFiles].sort(), ['lib/store.ts', 'src/webhooks.ts']);
+  assert.deepStrictEqual(refreshed.index.removedFiles, ['src/old.ts']);
+  assert.ok(refreshed.results.some(r => r.filePath.endsWith('webhooks.ts')), 'New file should be searchable immediately');
+  assert.ok(!SemanticSearchEngine.loadChunks(freshFixture).some(c => c.filePath.endsWith('old.ts')), 'Deleted file chunks should be dropped');
+
+  // With auto-refresh disabled, changes are reported as stale instead of re-indexed
+  process.env.CODEBASE_TRAINER_AUTO_REFRESH = '0';
+  writeFresh('src/webhooks.ts', 'export function revokeWebhookSecret() { return false; } // changed\n');
+  const staleSearch = SemanticSearchEngine.searchWithStatus(freshFixture, 'revokeWebhookSecret', 5);
+  assert.deepStrictEqual(staleSearch.index.staleFiles, ['src/webhooks.ts']);
+  assert.ok(staleSearch.results.find(r => r.filePath.endsWith('webhooks.ts'))?.stale, 'Hits from stale files should be flagged');
+  console.log(`   ✅ .gitignore respected; refreshed ${refreshed.index.refreshedFiles.length} file(s), removed 1, flagged ${staleSearch.index.staleFiles.length} stale.`);
+} finally {
+  if (savedAutoRefresh === undefined) delete process.env.CODEBASE_TRAINER_AUTO_REFRESH;
+  else process.env.CODEBASE_TRAINER_AUTO_REFRESH = savedAutoRefresh;
+  fs.rmSync(freshFixture, { recursive: true, force: true });
+}
+
+console.log('\n🎉 ALL 21 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');

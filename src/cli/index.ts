@@ -411,7 +411,7 @@ program
   .action((query, options) => {
     const repoPath = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10) || 5;
-    const results = SemanticSearchEngine.search(repoPath, query, limit);
+    const { results, index } = SemanticSearchEngine.searchWithStatus(repoPath, query, limit);
 
     if (options.json) {
       console.log(JSON.stringify(results, null, 2));
@@ -419,6 +419,17 @@ program
     }
 
     console.log(`🔎 Performing hybrid semantic search for: "${query}"...`);
+    if (index.fullRebuild) {
+      console.log(`🧱 Built search index (${index.checkedFiles} files).`);
+    } else if (index.refreshedFiles.length + index.removedFiles.length > 0) {
+      console.log(`♻️ Refreshed index: ${index.refreshedFiles.length} changed, ${index.removedFiles.length} removed file(s).`);
+    }
+    if (index.staleFiles.length > 0) {
+      console.log(`⚠️ ${index.staleFiles.length} file(s) changed since indexing and were not refreshed (CODEBASE_TRAINER_AUTO_REFRESH=0).`);
+    }
+    if (index.error) {
+      console.log(`⚠️ ${index.error}`);
+    }
     if (results.length === 0) {
       console.log('⚠️ No matching semantic code chunks found.');
       return;

@@ -506,9 +506,21 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
 
     if (name === 'search_codebase') {
       const query = String(args?.query || '');
-      const searchHits = SemanticSearchEngine.search(repoPath, query, 5);
+      const { results: searchHits, index } = SemanticSearchEngine.searchWithStatus(repoPath, query, 5);
       const response: Record<string, unknown> = {
         semanticResults: SemanticSearchEngine.compactResults(repoPath, query, searchHits),
+        index: {
+          builtAt: index.builtAt,
+          refreshedAt: index.refreshedAt,
+          fullRebuild: index.fullRebuild,
+          refreshedFiles: index.refreshedFiles.length,
+          removedFiles: index.removedFiles.length,
+          ...(index.staleFiles.length > 0 && {
+            staleFiles: index.staleFiles.slice(0, 20),
+            warning: `${index.staleFiles.length} file(s) changed since indexing and were not refreshed; results marked stale may be out of date.`,
+          }),
+          ...(index.error && { error: index.error }),
+        },
       };
       if (args?.include_conventions === true) {
         response.conventions = ConventionMiner.loadConventions(repoPath);

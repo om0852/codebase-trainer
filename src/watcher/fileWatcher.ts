@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
+import { GitIgnoreRules } from '../extractors/gitignore.js';
 import { SemanticSearchEngine } from '../semantic/searchEngine.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
 import { CallGraphAnalyzer } from '../graph/callGraph.js';
@@ -16,31 +17,16 @@ export class CodebaseWatcher {
     console.log(`⚡ Watching for file changes (.ts, .js, .py, .go, .rs, .java, .cpp, .json, .md)...`);
     console.log(`Press Ctrl+C to stop watching.\n`);
 
-    const ignoreDirs = [
-      'node_modules', '.git', '.codebase', 'dist', 'build', '.next', 'vendor',
-      'target', '.venv', 'venv', 'env', '.env', '__pycache__', 'coverage',
-      '.pytest_cache', 'site-packages', '.cache', 'lib', 'Lib', 'data', 'models'
-    ];
-
-    const validExtensions = [
-      '.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.rs', '.java',
-      '.c', '.cpp', '.h', '.hpp', '.json', '.md'
-    ];
+    // Same directory, extension, .gitignore and .codebaseignore rules as the indexer
+    const gitignore = GitIgnoreRules.load(absoluteRepoPath);
 
     try {
       fs.watch(absoluteRepoPath, { recursive: true }, (eventType, filename) => {
         if (!filename) return;
 
-        const normPath = filename.replace(/\\/g, '/');
-        // Check ignored directories
-        if (ignoreDirs.some(dir => normPath.startsWith(dir + '/') || normPath.includes('/' + dir + '/'))) {
-          return;
-        }
-
-        const ext = path.extname(filename).toLowerCase();
-        if (!validExtensions.includes(ext)) return;
-
         const fullPath = path.join(absoluteRepoPath, filename);
+        if (!ASTExtractor.isIndexablePath(absoluteRepoPath, fullPath, gitignore)) return;
+
         this.changedFiles.add(fullPath);
 
         if (this.debounceTimer) {

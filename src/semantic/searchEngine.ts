@@ -36,6 +36,36 @@ export interface SearchResult {
   matchedSymbol?: string;
   pageRankScore?: number;
   denseSimilarity?: number;
+  // File changed on disk since it was indexed and was not refreshed (auto-refresh disabled)
+  stale?: boolean;
+}
+
+export interface IndexedFileStat {
+  mtimeMs: number;
+  size: number;
+}
+
+export interface IndexMeta {
+  builtAt: string;
+  refreshedAt: string;
+  // Repo-relative POSIX path -> stats at the time the file was chunked
+  files: Record<string, IndexedFileStat>;
+}
+
+interface IndexStorePayload {
+  chunks: CodeChunk[];
+  meta?: IndexMeta;
+}
+
+export interface IndexFreshness {
+  builtAt: string | null;
+  refreshedAt: string | null;
+  fullRebuild: boolean;
+  checkedFiles: number;
+  refreshedFiles: string[];
+  removedFiles: string[];
+  staleFiles: string[];
+  error?: string;
 }
 
 export interface SearchOptions {
@@ -51,6 +81,7 @@ export interface CompactSearchResult {
   score: number;
   matchType?: SearchResult['matchType'];
   matchedSymbol?: string;
+  stale?: boolean;
   snippet: string;
 }
 
@@ -129,34 +160,39 @@ export class SemanticSearchEngine {
     return path.join(repoPath, '.codebase', 'embeddings.json');
   }
 
-  public static loadChunks(repoPath: string): CodeChunk[] {
+  private static toRelPath(repoPath: string, filePath: string): string {
+    return path.relative(repoPath, filePath).replace(/\\/g, '/');
+  }
+
+  /**
+   * Reads embeddings.json. `unreadable` is set when the file exists but cannot be parsed or decrypted,
+   * so callers never overwrite an encrypted index they merely lack the key for.
+   */
+  private static readStore(repoPath: string): { payload: IndexStorePayload | null; unreadable: boolean } {
     const storePath = this.getStorePath(repoPath);
-    if (!fs.existsSync(storePath)) return [];
+    if (!fs.existsSync(storePath)) return { payload: null, unreadable: false };
 
     try {
-      const raw = fs.readFileSync(storePath, 'utf8');
-      const parsed = JSON.parse(raw);
-
-      if (IndexEncryption.isEncrypted(parsed)) {
-        const decryptedStr = IndexEncryption.decrypt(parsed, repoPath);
-        const data = JSON.parse(decryptedStr);
-        return data.chunks || [];
-      }
-
-      return parsed.chunks || [];
+      const parsed = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+      const data = IndexEncryption.isEncrypted(parsed) ? JSON.parse(IndexEncryption.decrypt(parsed, repoPath)) : parsed;
+      return { payload: { chunks: data.chunks || [], meta: data.meta }, unreadable: false };
     } catch {
-      return [];
+      return { payload: null, unreadable: true };
     }
   }
 
-  public static saveChunks(repoPath: string, chunks: CodeChunk[], encrypt: boolean = false): void {
+  public static loadChunks(repoPath: string): CodeChunk[] {
+    return this.readStore(repoPath).payload?.chunks || [];
+  }
+
+  public static saveChunks(repoPath: string, chunks: CodeChunk[], encrypt: boolean = false, meta?: IndexMeta): void {
     const storePath = this.getStorePath(repoPath);
     const storeDir = path.dirname(storePath);
     if (!fs.existsSync(storeDir)) {
       fs.mkdirSync(storeDir, { recursive: true });
     }
 
-    const payloadStr = JSON.stringify({ chunks }, null, 2);
+    const payloadStr = JSON.stringify(meta ? { meta, chunks } : { chunks }, null, 2);
 
     // If encryption is requested or master key is present / environment key set
     const shouldEncrypt = encrypt || Boolean(process.env.CODEBASE_ENCRYPTION_KEY) || fs.existsSync(path.join(repoPath, '.codebase', '.master.key'));
@@ -171,41 +207,54 @@ export class SemanticSearchEngine {
 
   public static buildIndex(repoPath: string, encrypt: boolean = false): void {
     this.cachedPageRank.delete(path.resolve(repoPath));
-    const facts = ASTExtractor.scanDirectory(repoPath);
     const allChunks: CodeChunk[] = [];
+    const now = new Date().toISOString();
+    const meta: IndexMeta = { builtAt: now, refreshedAt: now, files: {} };
 
-    facts.forEach(f => {
-      const fileChunks = this.chunkFile(f.filePath, repoPath);
-      allChunks.push(...fileChunks);
+    ASTExtractor.listSourceFiles(repoPath).forEach(entry => {
+      allChunks.push(...this.chunkFile(entry.filePath, repoPath));
+      meta.files[this.toRelPath(repoPath, entry.filePath)] = { mtimeMs: entry.mtimeMs, size: entry.size };
     });
 
-    this.saveChunks(repoPath, allChunks, encrypt);
+    this.saveChunks(repoPath, allChunks, encrypt, meta);
   }
 
   /**
    * High-Performance Differential Incremental Indexer (<50ms).
    * Only re-chunks modified files and updates index without full rescan.
+   * Files that no longer exist or are no longer indexable are dropped from the index.
    */
   public static updateFileChunks(repoPath: string, modifiedFiles: string[]): { updatedCount: number; durationMs: number } {
     const start = Date.now();
     this.cachedPageRank.delete(path.resolve(repoPath));
-    const existing = this.loadChunks(repoPath);
+    const existing = this.readStore(repoPath).payload;
     const modSet = new Set(modifiedFiles.map(f => path.resolve(f)));
 
     // Retain chunks for unmodified files
-    const retained = existing.filter(c => !modSet.has(path.resolve(c.filePath)));
+    const retained = (existing?.chunks || []).filter(c => !modSet.has(path.resolve(c.filePath)));
+    const meta = existing?.meta;
 
     // Re-chunk changed files that exist
     const newChunks: CodeChunk[] = [];
-    modifiedFiles.forEach(file => {
-      const abs = path.resolve(file);
-      if (fs.existsSync(abs)) {
+    modSet.forEach(abs => {
+      const rel = this.toRelPath(repoPath, abs);
+      let stats: fs.Stats | null = null;
+      try {
+        stats = ASTExtractor.isIndexablePath(repoPath, abs) ? fs.statSync(abs) : null;
+      } catch {
+        stats = null;
+      }
+      if (stats) {
         newChunks.push(...this.chunkFile(abs, repoPath));
+        if (meta) meta.files[rel] = { mtimeMs: stats.mtimeMs, size: stats.size };
+      } else if (meta) {
+        delete meta.files[rel];
       }
     });
 
+    if (meta) meta.refreshedAt = new Date().toISOString();
     const combined = [...retained, ...newChunks];
-    this.saveChunks(repoPath, combined);
+    this.saveChunks(repoPath, combined, false, meta);
     const durationMs = Date.now() - start;
 
     return {
@@ -215,15 +264,86 @@ export class SemanticSearchEngine {
   }
 
   /**
+   * Compares the files on disk with the stats recorded at index time. Changed, new and deleted files are
+   * re-chunked in place (unless CODEBASE_TRAINER_AUTO_REFRESH=0, in which case they are reported as stale).
+   * A missing index, or one written before stats were recorded, is rebuilt in full.
+   */
+  public static ensureFreshIndex(repoPath: string, autoRefresh: boolean = process.env.CODEBASE_TRAINER_AUTO_REFRESH !== '0'): IndexFreshness {
+    return this.refreshStore(repoPath, autoRefresh).index;
+  }
+
+  // Returns the chunks it already loaded so search does not parse embeddings.json a second time
+  private static refreshStore(repoPath: string, autoRefresh: boolean): { index: IndexFreshness; chunks: CodeChunk[] } {
+    const { payload, unreadable } = this.readStore(repoPath);
+    const freshness = (meta: IndexMeta | undefined, extra: Partial<IndexFreshness>): IndexFreshness => ({
+      builtAt: meta?.builtAt ?? null,
+      refreshedAt: meta?.refreshedAt ?? null,
+      fullRebuild: false,
+      checkedFiles: Object.keys(meta?.files || {}).length,
+      refreshedFiles: [],
+      removedFiles: [],
+      staleFiles: [],
+      ...extra
+    });
+
+    if (unreadable) {
+      return {
+        index: freshness(undefined, { error: 'Index exists but could not be read or decrypted; results may be empty or out of date.' }),
+        chunks: []
+      };
+    }
+    if (!payload || !payload.meta) {
+      this.buildIndex(repoPath);
+      const rebuilt = this.readStore(repoPath).payload;
+      return { index: freshness(rebuilt?.meta, { fullRebuild: true }), chunks: rebuilt?.chunks || [] };
+    }
+
+    const meta = payload.meta;
+    const changed: string[] = [];
+    const seen = new Set<string>();
+    ASTExtractor.listSourceFiles(repoPath).forEach(entry => {
+      const rel = this.toRelPath(repoPath, entry.filePath);
+      seen.add(rel);
+      const prev = meta.files[rel];
+      if (!prev || prev.mtimeMs !== entry.mtimeMs || prev.size !== entry.size) changed.push(rel);
+    });
+    const removed = Object.keys(meta.files).filter(rel => !seen.has(rel));
+
+    if (changed.length === 0 && removed.length === 0) {
+      return { index: freshness(meta, { checkedFiles: seen.size }), chunks: payload.chunks };
+    }
+    if (!autoRefresh) {
+      return { index: freshness(meta, { checkedFiles: seen.size, staleFiles: [...changed, ...removed] }), chunks: payload.chunks };
+    }
+
+    this.updateFileChunks(repoPath, [...changed, ...removed].map(rel => path.join(repoPath, rel)));
+    const refreshed = this.readStore(repoPath).payload;
+    return {
+      index: freshness(refreshed?.meta, { checkedFiles: seen.size, refreshedFiles: changed, removedFiles: removed }),
+      chunks: refreshed?.chunks || []
+    };
+  }
+
+  /**
    * Hybrid Search: Reciprocal Rank Fusion of AST Symbol Precision + Okapi BM25
    */
   public static search(repoPath: string, query: string, topK: number = 5): SearchResult[] {
-    const storePath = this.getStorePath(repoPath);
-    if (!fs.existsSync(storePath)) {
-      this.buildIndex(repoPath);
-    }
+    return this.searchWithStatus(repoPath, query, topK).results;
+  }
 
-    const chunks = this.loadChunks(repoPath);
+  /**
+   * Same as search(), plus the freshness report from the pre-search index check.
+   */
+  public static searchWithStatus(repoPath: string, query: string, topK: number = 5): { results: SearchResult[]; index: IndexFreshness } {
+    const { index, chunks } = this.refreshStore(repoPath, process.env.CODEBASE_TRAINER_AUTO_REFRESH !== '0');
+    const staleFiles = new Set(index.staleFiles);
+    const results = this.rankChunks(repoPath, chunks, query, topK).map(r =>
+      staleFiles.has(this.toRelPath(repoPath, r.filePath)) ? { ...r, stale: true } : r
+    );
+    return { results, index };
+  }
+
+  private static rankChunks(repoPath: string, chunks: CodeChunk[], query: string, topK: number): SearchResult[] {
     const queryTokens = this.tokenize(query);
     if (queryTokens.length === 0 || chunks.length === 0) return [];
 
@@ -370,6 +490,7 @@ export class SemanticSearchEngine {
         snippet: window.join('\n')
       };
       if (hit.matchedSymbol) compact.matchedSymbol = hit.matchedSymbol;
+      if (hit.stale) compact.stale = true;
       return compact;
     });
   }

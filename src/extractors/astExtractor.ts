@@ -2,6 +2,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ASTFact } from '../types/index.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
+import { GitIgnoreRules } from './gitignore.js';
+
+// Build output, dependency and cache directories that are never indexed, even without a .gitignore
+const IGNORED_DIRS = [
+  'node_modules', '.git', '.codebase', 'dist', 'build', '.next', 'vendor',
+  'target', '.venv', 'venv', 'env', '.env', '__pycache__', 'coverage',
+  '.pytest_cache', 'site-packages', '.cache', 'Lib'
+];
+const SOURCE_EXTENSIONS = [
+  '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java',
+  '.c', '.cpp', '.cc', '.h', '.hpp', '.sql', '.php', '.md', '.markdown', '.json'
+];
+// Skip giant data files
+const MAX_FILE_BYTES = 500 * 1024;
+
+export interface SourceFileEntry {
+  filePath: string;
+  mtimeMs: number;
+  size: number;
+}
 
 export class ASTExtractor {
   public static extractFileFacts(filePath: string): ASTFact | null {
@@ -9,8 +29,7 @@ export class ASTExtractor {
 
     try {
       const stats = fs.statSync(filePath);
-      // Skip giant data files (> 500KB)
-      if (stats.size > 500 * 1024) return null;
+      if (stats.size > MAX_FILE_BYTES) return null;
     } catch {
       return null;
     }
@@ -200,39 +219,71 @@ export class ASTExtractor {
     };
   }
 
-  public static scanDirectory(dirPath: string): ASTFact[] {
-    const facts: ASTFact[] = [];
-    const ignoreDirs = [
-      'node_modules', '.git', '.codebase', 'dist', 'build', '.next', 'vendor',
-      'target', '.venv', 'venv', 'env', '.env', '__pycache__', 'coverage',
-      '.pytest_cache', 'site-packages', '.cache', 'lib', 'Lib', 'data', 'models'
-    ];
+  /**
+   * Lists every file the index covers (supported extension, <= 500KB, not excluded by the built-in
+   * directory list, the repo-root .gitignore, or .codebaseignore / secret patterns), with the stats
+   * used to detect changes since the last index build.
+   */
+  public static listSourceFiles(dirPath: string): SourceFileEntry[] {
+    const entries: SourceFileEntry[] = [];
+    const gitignore = GitIgnoreRules.load(dirPath);
 
     function walk(currentDir: string) {
-      let entries: fs.Dirent[] = [];
+      let dirents: fs.Dirent[] = [];
       try {
-        entries = fs.readdirSync(currentDir, { withFileTypes: true });
+        dirents = fs.readdirSync(currentDir, { withFileTypes: true });
       } catch {
         return;
       }
-      for (const entry of entries) {
+      for (const entry of dirents) {
         const fullPath = path.join(currentDir, entry.name);
+        const relPath = path.relative(dirPath, fullPath);
         if (entry.isDirectory()) {
-          if (!ignoreDirs.includes(entry.name)) {
+          if (!IGNORED_DIRS.includes(entry.name) && !gitignore.ignores(relPath, true)) {
             walk(fullPath);
           }
         } else if (entry.isFile()) {
-          // Check secret / ignore patterns
-          if (SecretSanitizer.isIgnoredFile(fullPath, dirPath)) {
-            continue;
+          if (!SOURCE_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())) continue;
+          if (gitignore.ignores(relPath, false) || SecretSanitizer.isIgnoredFile(fullPath, dirPath)) continue;
+          try {
+            const stats = fs.statSync(fullPath);
+            if (stats.size > MAX_FILE_BYTES) continue;
+            entries.push({ filePath: fullPath, mtimeMs: stats.mtimeMs, size: stats.size });
+          } catch {
+            // Deleted between readdir and stat
           }
-          const fact = ASTExtractor.extractFileFacts(fullPath);
-          if (fact) facts.push(fact);
         }
       }
     }
 
     walk(dirPath);
+    return entries;
+  }
+
+  /**
+   * Applies the same path rules as listSourceFiles to a single file (used by the file watcher).
+   */
+  public static isIndexablePath(repoPath: string, filePath: string, gitignore: GitIgnoreRules = GitIgnoreRules.load(repoPath)): boolean {
+    const relPath = path.relative(repoPath, filePath);
+    if (relPath.startsWith('..') || path.isAbsolute(relPath)) return false;
+    if (!SOURCE_EXTENSIONS.includes(path.extname(filePath).toLowerCase())) return false;
+    const dirs = relPath.split(/[\/]/).slice(0, -1);
+    if (dirs.some(d => IGNORED_DIRS.includes(d))) return false;
+    if (gitignore.ignores(relPath, false) || SecretSanitizer.isIgnoredFile(filePath, repoPath)) return false;
+    try {
+      return fs.statSync(filePath).size <= MAX_FILE_BYTES;
+    } catch {
+      // Deleted files still count as indexable paths so the watcher can drop their chunks
+      return true;
+    }
+  }
+
+  public static scanDirectory(dirPath: string): ASTFact[] {
+    const facts: ASTFact[] = [];
+    this.listSourceFiles(dirPath).forEach(entry => {
+      const fact = ASTExtractor.extractFileFacts(entry.filePath);
+      if (fact) facts.push(fact);
+    });
     return facts;
   }
 }

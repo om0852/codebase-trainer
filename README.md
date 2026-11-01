@@ -80,6 +80,14 @@ Add the following to your MCP client config (e.g. `mcp_config.json` in Cursor, C
 }
 ```
 
+### Index freshness
+
+Before every search, files on disk are compared with the stats recorded when they were indexed. Changed, new and deleted files are re-indexed in place, so results never come from code you have since edited. `search_codebase` returns an `index` block saying when the index was built and how many files were refreshed.
+
+Set `CODEBASE_TRAINER_AUTO_REFRESH=0` to skip re-indexing; changed files are then listed under `staleFiles` and their results carry `"stale": true`.
+
+The index covers files not excluded by the repo-root `.gitignore`, `.codebaseignore`, or the built-in list of dependency and build directories (`node_modules`, `dist`, `build`, `.next`, `vendor`, `target`, virtualenvs, caches).
+
 ---
 
 ## 📄 License
