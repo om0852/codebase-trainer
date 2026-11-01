@@ -80,6 +80,10 @@ export class IntentClassifier {
     return result('unknown', 0.5);
   }
 
+  public static isTestFile(relPath: string): boolean {
+    return this.classifyPath(relPath).role === 'test_spec';
+  }
+
   public static classifyFile(fact: ASTFact, repoPath?: string): FileRoleFact {
     const rel = repoPath ? path.relative(repoPath, fact.filePath) : fact.filePath;
     return { ...this.classifyPath(rel), filePath: fact.filePath };
@@ -94,6 +98,16 @@ export class IntentClassifier {
       || /(^|\/)pages\//.test(rel) || /\.config\.[cm]?[jt]s$/.test(rel) || /\.(stories|story)\.[jt]sx?$/.test(rel);
   }
 
+  /**
+   * Module a file belongs to: the second-level directory under a source root (`src/graph`), otherwise the
+   * top-level directory (`website`). Files at the repo root return null.
+   */
+  public static moduleOf(relPath: string): string | null {
+    const segments = relPath.replace(/\\/g, '/').split('/');
+    if (segments.length <= 1) return null;
+    return SOURCE_ROOTS.has(segments[0]) && segments.length > 2 ? `${segments[0]}/${segments[1]}` : segments[0];
+  }
+
   public static summarizeArchitecture(repoPath: string, facts: ASTFact[]): ArchitectureSummary {
     const roles: ArchitectureSummary['roles'] = {};
     const directories: Record<string, number> = {};
@@ -105,11 +119,8 @@ export class IntentClassifier {
       entry.count++;
       if (entry.examples.length < MAX_EXAMPLES) entry.examples.push(rel);
 
-      const segments = rel.split('/');
-      if (segments.length > 1) {
-        const dir = SOURCE_ROOTS.has(segments[0]) && segments.length > 2 ? `${segments[0]}/${segments[1]}` : segments[0];
-        directories[dir] = (directories[dir] || 0) + 1;
-      }
+      const dir = this.moduleOf(rel);
+      if (dir) directories[dir] = (directories[dir] || 0) + 1;
     });
 
     const topDirectories = Object.fromEntries(

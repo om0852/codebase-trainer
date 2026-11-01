@@ -18,6 +18,8 @@ import { SarifExporter } from '../ci/sarifExporter.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
 import { DiffChecker } from '../review/diffChecker.js';
 import { DiffParser } from '../review/diffParser.js';
+import { DuplicationScanner } from '../quality/duplicationScanner.js';
+import { ArchitectureDiagramBuilder } from '../graph/architectureDiagram.js';
 import { OnboardingDocsGenerator } from '../enterprise/onboardingDocs.js';
 import { RouteRegistryManager } from '../microservices/routeRegistry.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
@@ -530,6 +532,52 @@ program
       console.log(`\n[${idx + 1}] [${issue.severity.toUpperCase()}] ${path.relative(repoPath, issue.filePath)}${issue.line ? `:${issue.line}` : ''}`);
       console.log(`    ${issue.description}`);
     });
+  });
+
+program
+  .command('duplicates')
+  .description('Find exact duplicated code blocks with every copy\'s file and line range')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-m, --min-lines <number>', 'Smallest block to report, in significant lines', '6')
+  .option('-t, --include-tests', 'Also scan test files')
+  .option('-j, --json', 'Output the report as JSON')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    const report = DuplicationScanner.scan(repoPath, {
+      minLines: parseInt(options.minLines, 10) || 6,
+      includeTests: Boolean(options.includeTests)
+    });
+
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+
+    console.log(`🧬 ${report.duplicationPercent}% of ${report.significantLines} significant lines are duplicated across ${report.scannedFiles} files.`);
+    report.blocks.forEach((block, idx) => {
+      console.log(`\n[${idx + 1}] ${block.lines} lines x ${block.occurrences.length} copies`);
+      block.occurrences.forEach(o => console.log(`    ${o.filePath}:${o.startLine}-${o.endLine}`));
+    });
+    report.notes.forEach(n => console.log(`\nℹ️  ${n}`));
+  });
+
+program
+  .command('architecture')
+  .description('Print a module-level dependency diagram (Mermaid) built from resolved imports')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-j, --json', 'Output modules, dependencies and cycles as JSON')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    const diagram = ArchitectureDiagramBuilder.build(repoPath);
+
+    if (options.json) {
+      console.log(JSON.stringify(diagram, null, 2));
+      return;
+    }
+
+    console.log(`\`\`\`mermaid\n${diagram.mermaidDiagram}\n\`\`\``);
+    diagram.moduleCycles.forEach(cycle => console.log(`⚠️ Module cycle: ${cycle.join(' <-> ')}`));
+    diagram.notes.forEach(n => console.log(`ℹ️  ${n}`));
   });
 
 program

@@ -1,6 +1,7 @@
 import { SemanticSearchEngine } from '../semantic/searchEngine.js';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { CallSiteExtractor, FlowEdge } from './callSites.js';
+import { IntentClassifier } from '../classifier/intentClassifier.js';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -48,7 +49,7 @@ export class ExecutionFlowTracer {
   public static traceFlow(repoPath: string, featureQuery: string): ExecutionFlowResult {
     const toRel = (f: string) => path.relative(repoPath, f).replace(/\\/g, '/');
     const hits = SemanticSearchEngine.search(repoPath, featureQuery, 15)
-      .filter(h => h.kind === 'code' && !this.isTestFile(toRel(h.filePath)));
+      .filter(h => h.kind === 'code' && !IntentClassifier.isTestFile(toRel(h.filePath)));
 
     // Seed files: the distinct code files search ranks highest for the query
     const seeds: string[] = [];
@@ -63,7 +64,7 @@ export class ExecutionFlowTracer {
     });
 
     const facts = ASTExtractor.scanDirectory(repoPath);
-    const allEdges = CallSiteExtractor.extractEdges(repoPath, facts).filter(e => !this.isTestFile(e.from.filePath));
+    const allEdges = CallSiteExtractor.extractEdges(repoPath, facts).filter(e => !IntentClassifier.isTestFile(e.from.filePath));
     const outEdges = new Map<string, FlowEdge[]>();
     const inEdges = new Map<string, FlowEdge[]>();
     allEdges.forEach(e => {
@@ -111,9 +112,6 @@ export class ExecutionFlowTracer {
     };
   }
 
-  public static isTestFile(relPath: string): boolean {
-    return /(^|\/)(tests?|__tests__|spec)\//i.test(relPath) || /\.(test|spec)\.[a-z]+$/i.test(relPath);
-  }
 
   /**
    * True for files that start a flow: Next.js pages, layouts, route handlers and middleware, CLI command

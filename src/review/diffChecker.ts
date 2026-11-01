@@ -4,7 +4,6 @@ import { execSync } from 'child_process';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ImportResolver } from '../graph/importResolver.js';
 import { CallSiteExtractor } from '../flow/callSites.js';
-import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
 import { IntentClassifier } from '../classifier/intentClassifier.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
@@ -163,7 +162,7 @@ export class DiffChecker {
     const isDoc = DOC_EXTENSIONS.includes(ext);
     const isJsTs = JS_TS_EXTENSIONS.includes(ext);
     const isTs = TS_EXTENSIONS.includes(ext);
-    const isTest = ExecutionFlowTracer.isTestFile(file.filePath);
+    const isTest = IntentClassifier.isTestFile(file.filePath);
     const isPython = ext === '.py';
     const current = this.readCurrent(repoPath, file.filePath);
     // File-level signals are read from code only, so patterns quoted in comments, strings or regex literals don't count
@@ -303,7 +302,7 @@ export class DiffChecker {
         { file: norm(issue.serverFile), line: issue.serverLine }
       ];
       // Tests mock fetch calls and fixture routes freely; drift there is not a contract problem
-      const hit = sides.find(s => s.file && s.line && !ExecutionFlowTracer.isTestFile(s.file) && addedByFile.get(s.file)?.has(s.line));
+      const hit = sides.find(s => s.file && s.line && !IntentClassifier.isTestFile(s.file) && addedByFile.get(s.file)?.has(s.line));
       if (!hit) return;
       findings.push({
         ruleId: 'contract-drift',

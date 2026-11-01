@@ -24,6 +24,8 @@ import { DocstringMiner } from '../miner/docstringMiner.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { DiffChecker } from '../review/diffChecker.js';
+import { DuplicationScanner } from '../quality/duplicationScanner.js';
+import { ArchitectureDiagramBuilder } from '../graph/architectureDiagram.js';
 
 export async function runMCPServer(initialRepoPath: string = process.cwd()) {
   function resolveRepoPath(customPath?: string): string {
@@ -339,7 +341,7 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'visualize_architecture',
-          description: 'Generate a Mermaid diagram representing the high-level module architecture of the codebase.',
+          description: 'Module-level dependency diagram (Mermaid) built from resolved imports: which directories import which, how many imports each arrow stands for, and module import cycles.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -347,10 +349,19 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'scan_code_duplication',
-          description: 'Scan the codebase for duplicated logic or overly similar files to suggest abstraction refactors.',
+          description: 'Find exact duplicated code blocks (whitespace-insensitive, at least min_lines significant lines) across code files, with every copy\'s file and line range.',
           inputSchema: {
             type: 'object',
-            properties: {},
+            properties: {
+              min_lines: {
+                type: 'number',
+                description: 'Smallest duplicated block to report, in significant lines (default 6).',
+              },
+              include_tests: {
+                type: 'boolean',
+                description: 'Also scan test files (default false).',
+              },
+            },
           },
         },
       ],
@@ -582,33 +593,23 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     }
 
     if (name === 'visualize_architecture') {
-      const dirs = fs.readdirSync(repoPath, { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
-        .map(d => d.name);
-      
-      let mermaid = 'graph TD\\n  Root["' + path.basename(repoPath) + '"]\\n';
-      dirs.forEach(d => {
-         mermaid += `  Root --> ${d}["${d}"]\\n`;
-      });
-
+      const diagram = ArchitectureDiagramBuilder.build(repoPath);
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ mermaidDiagram: mermaid, message: "Architecture diagram generated." }, null, 2),
+            text: JSON.stringify(diagram, null, 2),
           },
         ],
       };
     }
 
     if (name === 'scan_code_duplication') {
-      const report = {
-         scannedFiles: 35,
-         duplicatesFound: 0,
-         score: 'A+',
-         message: "No major code duplication detected. Codebase is well-abstracted.",
-      };
-      
+      const report = DuplicationScanner.scan(repoPath, {
+        minLines: args?.min_lines ? Number(args.min_lines) : undefined,
+        includeTests: args?.include_tests === true,
+      });
+
       return {
         content: [
           {

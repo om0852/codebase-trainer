@@ -53,13 +53,22 @@ npx cb-trainer ui
 # 9. Audit Call-Graph Dependencies, Circular Imports & Hotpath I/O
 npx cb-trainer audit
 
-# 10. Generate Automated PR Review Report
+# 10. Check the Working-Tree Diff (secrets, broken imports, API drift, conventions)
+npx cb-trainer review --base main
+
+# 11. Generate Automated PR Review Report
 npx cb-trainer pr-review
 
-# 11. Run Unit Test Suite
+# 12. Find Duplicated Code Blocks (every copy's file:line range)
+npx cb-trainer duplicates --min-lines 6
+
+# 13. Module Dependency Diagram from Resolved Imports (Mermaid)
+npx cb-trainer architecture
+
+# 14. Run Unit Test Suite
 npm test
 
-# 12. Launch MCP Stdio Server
+# 15. Launch MCP Stdio Server
 npx cb-trainer mcp
 ```
 
