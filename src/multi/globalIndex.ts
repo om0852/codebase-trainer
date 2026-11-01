@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
 import { IndexStore } from '../storage/db.js';
-import { SemanticSearchEngine, CodeChunk, SearchResult } from '../semantic/searchEngine.js';
+import { SemanticSearchEngine, CodeChunk, SearchResult, KIND_SCORE_WEIGHT } from '../semantic/searchEngine.js';
 
 export interface GlobalWorkspaceModel {
   totalRepos: number;
@@ -128,14 +128,16 @@ export class GlobalIndexManager {
         if (chunkTokenSet.has(qTerm)) matchCount++;
       });
 
-      const score = matchCount / queryTokens.length;
+      const kind = SemanticSearchEngine.classifyKind(chunk.filePath);
+      const score = (matchCount / queryTokens.length) * KIND_SCORE_WEIGHT[kind];
 
       return {
         filePath: chunk.filePath,
         startLine: chunk.startLine,
         endLine: chunk.endLine,
         snippet: chunk.content,
-        score
+        score,
+        kind
       };
     });
 

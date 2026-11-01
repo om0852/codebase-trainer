@@ -1,6 +1,6 @@
 import { ASTExtractor } from '../src/extractors/astExtractor.js';
 import { ConventionMiner } from '../src/miner/conventionMiner.js';
-import { SemanticSearchEngine } from '../src/semantic/searchEngine.js';
+import { SemanticSearchEngine, KIND_SCORE_WEIGHT } from '../src/semantic/searchEngine.js';
 import { CallGraphAnalyzer } from '../src/graph/callGraph.js';
 import { ImpactAnalyzer } from '../src/graph/impactAnalyzer.js';
 import { VulnerabilityScanner } from '../src/security/vulnerabilityScanner.js';
@@ -241,4 +241,38 @@ try {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
 }
 
-console.log('\n🎉 ALL 19 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');
+// Test 20: Search result kinds, doc down-weighting and compact agent output
+console.log('2️⃣0️⃣ Testing Search Result Kinds & Compact Output...');
+const searchFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-trainer-search-'));
+try {
+  const codeLines = Array.from({ length: 20 }, (_, i) => `const filler${i} = ${i};`);
+  codeLines.push('export function revokeApiKey(keyId: string) {', '  return store.revoke(keyId);', '}');
+  fs.mkdirSync(path.join(searchFixture, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(searchFixture, 'src', 'keys.ts'), codeLines.join('\n'), 'utf8');
+  fs.writeFileSync(path.join(searchFixture, 'GUIDE.md'), Array.from({ length: 10 }, () => 'Revoke an API key: revoke api key revokeApiKey revoke key.').join('\n'), 'utf8');
+
+  const hits = SemanticSearchEngine.search(searchFixture, 'how to revoke an api key', 5);
+  const codeHit = hits.find(h => h.filePath.endsWith('keys.ts'));
+  const docHit = hits.find(h => h.filePath.endsWith('GUIDE.md'));
+  assert.ok(codeHit && docHit, 'Both code and doc should match');
+  assert.strictEqual(codeHit.kind, 'code');
+  assert.strictEqual(docHit.kind, 'doc');
+  assert.ok(docHit.score / KIND_SCORE_WEIGHT.doc > codeHit.score, 'Fixture doc should outscore code before weighting');
+  assert.ok(hits.indexOf(codeHit) < hits.indexOf(docHit), 'Code should rank above docs after weighting');
+
+  // The 23-line chunk starting at L1 must be narrowed down to the window around the definition
+  const fullChunk = hits.find(h => h.filePath.endsWith('keys.ts') && h.startLine === 1);
+  assert.ok(fullChunk && fullChunk.snippet.split('\n').length > 12, 'Fixture should produce a chunk longer than the snippet window');
+  const compact = SemanticSearchEngine.compactResults(searchFixture, 'how to revoke an api key', [fullChunk], 12);
+  const fileLines = fs.readFileSync(path.join(searchFixture, 'src', 'keys.ts'), 'utf8').split('\n');
+  assert.strictEqual(compact[0].filePath, 'src/keys.ts', 'Paths should be repo-relative');
+  assert.strictEqual(compact[0].snippet.split('\n').length, 12, 'Snippet should be narrowed to 12 lines');
+  assert.ok(compact[0].startLine > 1, 'Window should move past the filler lines');
+  assert.ok(compact[0].snippet.includes('export function revokeApiKey'), 'Snippet should keep the matched definition');
+  assert.strictEqual(compact[0].snippet.split('\n')[0], fileLines[compact[0].startLine - 1], 'startLine should point at the first snippet line');
+  console.log(`   ✅ Code ranked above docs; compact snippet ${compact[0].filePath}#L${compact[0].startLine}-L${compact[0].endLine}.`);
+} finally {
+  fs.rmSync(searchFixture, { recursive: true, force: true });
+}
+
+console.log('\n🎉 ALL 20 ENTERPRISE & ALGORITHM TESTS PASSED SUCCESSFULLY!');

@@ -265,13 +265,17 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'search_codebase',
-          description: 'Perform semantic vector search across indexed code chunks, symbols, and conventions.',
+          description: 'Perform hybrid semantic/keyword search across indexed code chunks and symbols. Each result is labelled code, doc or config; docs rank below code.',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
                 description: 'Semantic query describing code behavior, conventions, or rules.',
+              },
+              include_conventions: {
+                type: 'boolean',
+                description: 'Also return the learned conventions block (off by default; use get_codebase_conventions instead).',
               },
             },
             required: ['query'],
@@ -502,14 +506,19 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
 
     if (name === 'search_codebase') {
       const query = String(args?.query || '');
-      const conventions = ConventionMiner.loadConventions(repoPath);
       const searchHits = SemanticSearchEngine.search(repoPath, query, 5);
+      const response: Record<string, unknown> = {
+        semanticResults: SemanticSearchEngine.compactResults(repoPath, query, searchHits),
+      };
+      if (args?.include_conventions === true) {
+        response.conventions = ConventionMiner.loadConventions(repoPath);
+      }
 
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ conventions, semanticResults: searchHits }, null, 2),
+            text: JSON.stringify(response, null, 2),
           },
         ],
       };

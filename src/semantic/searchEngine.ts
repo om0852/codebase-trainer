@@ -18,12 +18,20 @@ export interface CodeChunk {
   embedding?: number[];
 }
 
+export type ChunkKind = 'code' | 'doc' | 'config';
+
+// Docs often restate code in plain words and win on keyword overlap; keep them findable but rank code first
+export const KIND_SCORE_WEIGHT: Record<ChunkKind, number> = { code: 1.0, config: 1.0, doc: 0.5 };
+const DOC_EXTENSIONS = ['.md', '.markdown', '.mdx', '.txt', '.rst'];
+const CONFIG_EXTENSIONS = ['.json', '.yaml', '.yml', '.toml', '.ini'];
+
 export interface SearchResult {
   filePath: string;
   startLine: number;
   endLine: number;
   snippet: string;
   score: number;
+  kind: ChunkKind;
   matchType?: 'ast-symbol' | 'semantic-bm25' | 'hybrid';
   matchedSymbol?: string;
   pageRankScore?: number;
@@ -35,7 +43,25 @@ export interface SearchOptions {
   encrypt?: boolean;
 }
 
+export interface CompactSearchResult {
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  kind: ChunkKind;
+  score: number;
+  matchType?: SearchResult['matchType'];
+  matchedSymbol?: string;
+  snippet: string;
+}
+
 export class SemanticSearchEngine {
+  public static classifyKind(filePath: string): ChunkKind {
+    const ext = path.extname(filePath).toLowerCase();
+    if (DOC_EXTENSIONS.includes(ext)) return 'doc';
+    if (CONFIG_EXTENSIONS.includes(ext)) return 'config';
+    return 'code';
+  }
+
   public static tokenize(text: string): string[] {
     // Split camelCase and PascalCase
     const expanded = text.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
@@ -283,7 +309,8 @@ export class SemanticSearchEngine {
       const hasRelevance = bm25Score > 0 || symbolBoost > 0 || vectorBoost > 0;
       const prBoost = hasRelevance ? Math.min(pageRankScore * 0.75, 2.5) : 0;
 
-      const totalScore = bm25Score + symbolBoost + vectorBoost + prBoost;
+      const kind = this.classifyKind(chunk.filePath);
+      const totalScore = (bm25Score + symbolBoost + vectorBoost + prBoost) * KIND_SCORE_WEIGHT[kind];
       const matchType: SearchResult['matchType'] = symbolBoost > 0 
         ? (bm25Score > 0 || vectorBoost > 0 ? 'hybrid' : 'ast-symbol')
         : (vectorBoost > 0 && bm25Score > 0 ? 'hybrid' : 'semantic-bm25');
@@ -294,6 +321,7 @@ export class SemanticSearchEngine {
         endLine: chunk.endLine,
         snippet: chunk.content,
         score: totalScore,
+        kind,
         matchType,
         matchedSymbol,
         pageRankScore,
@@ -305,5 +333,44 @@ export class SemanticSearchEngine {
       .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
+  }
+
+  /**
+   * Token-lean view of search hits for agents: repo-relative paths and a snippet narrowed to the
+   * lines that best match the query, with startLine/endLine adjusted to the narrowed window.
+   */
+  public static compactResults(repoPath: string, query: string, hits: SearchResult[], maxLines: number = 12): CompactSearchResult[] {
+    const queryTokens = new Set(this.tokenize(query));
+
+    return hits.map(hit => {
+      const lines = hit.snippet.split(/\r?\n/);
+      let start = 0;
+      if (lines.length > maxLines) {
+        const symbol = hit.matchedSymbol?.replace(/\$/g, '\\$');
+        // Anchor on the matched definition, else the line with the most query-token hits
+        let anchor = symbol
+          ? lines.findIndex(l => new RegExp(`(?:function|class|interface|type|const|let|var|def|fn)\\s+${symbol}\\b`).test(l))
+          : -1;
+        if (anchor < 0) {
+          const lineHits = lines.map(l => this.tokenize(l).filter(t => queryTokens.has(t)).length);
+          anchor = lineHits.indexOf(Math.max(...lineHits));
+        }
+        // Keep a couple of lines of lead-in (doc comments, decorators) and give the rest to the body
+        start = Math.max(0, Math.min(anchor - 2, lines.length - maxLines));
+      }
+      const window = lines.slice(start, start + maxLines);
+
+      const compact: CompactSearchResult = {
+        filePath: path.relative(repoPath, hit.filePath).replace(/\\/g, '/'),
+        startLine: hit.startLine + start,
+        endLine: hit.startLine + start + window.length - 1,
+        kind: hit.kind,
+        score: Number(hit.score.toFixed(2)),
+        matchType: hit.matchType,
+        snippet: window.join('\n')
+      };
+      if (hit.matchedSymbol) compact.matchedSymbol = hit.matchedSymbol;
+      return compact;
+    });
   }
 }

@@ -432,7 +432,8 @@ program
         ? ' [⚡ Hybrid Match]' 
         : ' [Semantic BM25]';
       const prTag = r.pageRankScore ? ` [Centrality: ${r.pageRankScore}]` : '';
-      console.log(`\n[${idx + 1}] Score: ${(r.score * 100).toFixed(1)}%${typeTag}${prTag} | ${path.relative(repoPath, r.filePath)}#L${r.startLine}-L${r.endLine}`);
+      const kindTag = r.kind !== 'code' ? ` [${r.kind}]` : '';
+      console.log(`\n[${idx + 1}] Score: ${(r.score * 100).toFixed(1)}%${typeTag}${prTag}${kindTag} | ${path.relative(repoPath, r.filePath)}#L${r.startLine}-L${r.endLine}`);
       console.log('---');
       console.log(r.snippet.split('\n').slice(0, 5).join('\n'));
     });
