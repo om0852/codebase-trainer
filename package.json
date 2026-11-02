@@ -1,6 +1,6 @@
 {
   "name": "codebase-trainer",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Local, offline codebase context for AI coding agents: feature slices across UI, API and data layers, flow tracing, impact and test selection, diff review and a permission map, over MCP or CLI",
   "homepage": "https://om0852.github.io/codebase-trainer/",
   "repository": {

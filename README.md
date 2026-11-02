@@ -10,7 +10,13 @@
 
 ---
 
-## 🆕 What's new in 2.0.0
+## 🆕 2.0.1
+
+- **macOS: changes right after the MCP server starts are no longer missed.** The file watcher starts a moment after it is created, and edits in that gap were never reported, so a new file could be missing from results for up to 10 minutes. The server now rescans during start-up, and does a full rescan at least every minute (about 60 ms on 10,000 files).
+- **Branch-name conventions on macOS and Linux:** reading branches no longer goes through a shell that failed to parse the command, so they are learned again.
+- The npm page links the website, the repository and the issue tracker.
+
+## What's new in 2.0.0
 
 - **`feature_slice`**: one call returns everything a feature touches, from UI to client, route, service and data model, with why each file is included, the flows between them, and code packed to a token budget. On the benchmark's feature questions it finds 83% of the needed files in about 4,500 tokens; the top 10 search results find 59%.
 - **Cross-stack links**: Prisma, Drizzle and TypeORM calls reach their models; NestJS dependency injection, tRPC procedures, fetch wrappers and axios instances reach their handlers.
