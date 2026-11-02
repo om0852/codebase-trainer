@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
+import { extractCodeFacts } from '../parsing/codeFacts.js';
+import { TreeSitter } from '../parsing/treeSitter.js';
 
 export interface ClientCall {
   method: string;
@@ -110,7 +112,76 @@ export class ContractDriftDetector {
       });
     });
 
+    calls.push(...this.wrapperClientCalls(repoPath, facts, calls));
     return calls;
+  }
+
+  /**
+   * Requests made through helpers rather than `fetch`/`axios` directly (needs tree-sitter):
+   * - wrapper functions whose first parameter is passed into `fetch`/axios: `apiFetch('/api/keys', { method: 'DELETE' })`
+   * - axios instances: `const api = axios.create({ baseURL: '/api' })` then `api.delete('/keys/1')`
+   * Wrappers and instances are matched by name across the repo.
+   */
+  private static wrapperClientCalls(repoPath: string, facts: Array<{ filePath: string }>, existing: ClientCall[]): ClientCall[] {
+    const VERBS = ['get', 'post', 'put', 'patch', 'delete'];
+    const wrappers = new Map<string, string | null>(); // name -> fixed method (or null: read from options)
+    const instances = new Map<string, string>();       // axios instance variable -> baseURL ('' when absolute/unknown)
+    const sources: Array<{ rel: string; content: string; lines: string[]; facts: NonNullable<ReturnType<typeof extractCodeFacts>> }> = [];
+
+    facts.forEach(fact => {
+      const content = ASTExtractor.readSourceFile(fact.filePath);
+      const tree = content ? extractCodeFacts(fact.filePath, content) : null;
+      if (!content || !tree) return;
+      const lines = content.split(/\r?\n/);
+      sources.push({ rel: path.relative(repoPath, fact.filePath), content, lines, facts: tree });
+
+      for (const m of content.matchAll(/(?:const|let|var)\s+([\w$]+)\s*=\s*axios\.create\(([^)]*)/g)) {
+        const base = m[2].match(/baseURL\s*:\s*['"`]([^'"`]*)['"`]/)?.[1] ?? '';
+        instances.set(m[1], base.startsWith('/') ? base : base.replace(/^https?:\/\/[^/]+/, ''));
+      }
+      tree.symbols.filter(s => s.kind === 'function' || s.kind === 'method').forEach(symbol => {
+        const firstParam = symbol.signature.match(/\(\s*(?:\{[^}]*\}|[\w$]+)/)?.[0].replace(/^\(\s*/, '');
+        if (!firstParam || firstParam.startsWith('{')) return;
+        const passesParam = tree.calls.some(c =>
+          c.enclosing === symbol.qualifiedName && /^(fetch|axios(\.\w+)?)$/.test(c.callee)
+          && new RegExp(`\\b${firstParam.replace(/\$/g, '\\$')}\\b`).test(lines[c.line - 1] || ''));
+        if (!passesParam) return;
+        const verb = symbol.name.toLowerCase().match(/(get|post|put|patch|delete)$/)?.[1];
+        wrappers.set(symbol.name, verb ? verb.toUpperCase() : null);
+      });
+    });
+    if (wrappers.size === 0 && instances.size === 0) return [];
+
+    const seen = new Set(existing.map(c => `${c.filePath}:${c.line}`));
+    const results: ClientCall[] = [];
+    sources.forEach(({ rel, lines, facts: tree }) => {
+      tree.calls.forEach(call => {
+        const url = call.firstStringArg;
+        if (!url || !(url.startsWith('/') || url.includes('api')) || seen.has(`${rel}:${call.line}`)) return;
+        let method: string | null = null;
+        let endpoint = url;
+        const [object, member] = call.callee.split('.');
+        if (member && instances.has(object) && VERBS.includes(member.toLowerCase())) {
+          method = member.toUpperCase();
+          endpoint = (instances.get(object)!.replace(/\/$/, '') + '/' + url.replace(/^\//, '')).replace(/^([^/])/, '/$1');
+        } else if (wrappers.has(call.callee)) {
+          const block = this.callArguments(lines, call.line - 1, (lines[call.line - 1] || '').indexOf('('));
+          method = wrappers.get(call.callee) ?? block.match(/method\s*:\s*['"`](GET|POST|PUT|DELETE|PATCH)['"`]/i)?.[1].toUpperCase() ?? 'GET';
+        }
+        if (!method) return;
+        const block = this.callArguments(lines, call.line - 1, (lines[call.line - 1] || '').indexOf('('));
+        results.push({
+          method,
+          endpoint: endpoint.split('?')[0],
+          filePath: rel,
+          line: call.line,
+          payloadKeys: method !== 'GET' ? this.extractKeysFromBody(block) : [],
+          queryKeys: this.extractQueryKeys(endpoint)
+        });
+        seen.add(`${rel}:${call.line}`);
+      });
+    });
+    return results;
   }
 
   /**
@@ -119,6 +190,15 @@ export class ContractDriftDetector {
   public static extractServerEndpoints(repoPath: string): ServerEndpoint[] {
     const facts = ASTExtractor.scanDirectory(repoPath);
     const endpoints: ServerEndpoint[] = [];
+    // NestJS `app.setGlobalPrefix('api')` applies to every decorator route
+    let globalPrefix = '';
+    for (const fact of facts) {
+      const match = (ASTExtractor.readSourceFile(fact.filePath) ?? '').match(/\.setGlobalPrefix\(\s*['"`]([^'"`]+)['"`]/);
+      if (match) {
+        globalPrefix = match[1];
+        break;
+      }
+    }
 
     facts.forEach(fact => {
       const content = ASTExtractor.readSourceFile(fact.filePath);
@@ -126,8 +206,12 @@ export class ContractDriftDetector {
 
       const lines = content.split(/\r?\n/);
       const relPath = path.relative(repoPath, fact.filePath);
+      // These line patterns are for JavaScript; with a syntax tree, Python routes come from their decorators
+      // (with router prefixes), so `@router.post("/items")` must not also match the Express pattern here
+      const pythonFromDecorators = fact.filePath.endsWith('.py') && TreeSitter.isReady();
 
       lines.forEach((line, idx) => {
+        if (pythonFromDecorators) return;
         const lineNum = idx + 1;
         const trimmed = line.trim();
         if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return;
@@ -164,7 +248,8 @@ export class ContractDriftDetector {
           let endpoint = normRel;
           if (endpoint.includes('api/')) {
             endpoint = '/' + endpoint.substring(endpoint.indexOf('api/'));
-            endpoint = endpoint.replace(/\/route\.(ts|js|mjs)/, '').replace(/\.(ts|js|mjs)/, '');
+            // `.../route.tsx` and pages-router files such as `pages/api/keys.ts`
+            endpoint = endpoint.replace(/\/route\.[cm]?[jt]sx?$/, '').replace(/\.[cm]?[jt]sx?$/, '');
           }
 
           const handlerBlock = lines.slice(idx, Math.min(lines.length, idx + 35)).join('\n');
@@ -181,9 +266,78 @@ export class ContractDriftDetector {
           });
         }
       });
+
+      endpoints.push(...this.decoratorEndpoints(fact.filePath, relPath, content, lines, globalPrefix));
     });
 
     return endpoints;
+  }
+
+  /**
+   * Routes declared with decorators (needs tree-sitter): NestJS `@Controller('articles')` + `@Get(':slug')`,
+   * FastAPI `@app.get('/items')` / `@router.post(...)` (with `APIRouter(prefix=...)`), and Flask
+   * `@app.route('/x', methods=['POST'])` / blueprints.
+   */
+  private static decoratorEndpoints(absPath: string, relPath: string, content: string, lines: string[], globalPrefix: string): ServerEndpoint[] {
+    const facts = extractCodeFacts(absPath, content);
+    if (!facts) return [];
+    const join = (...parts: string[]) => '/' + parts.map(p => p.replace(/^\/+|\/+$/g, '')).filter(Boolean).join('/');
+    const firstString = (decorator: string) => decorator.match(/\(\s*(?:path\s*[:=]\s*)?['"`]([^'"`]*)['"`]/)?.[1] ?? '';
+    const endpoint = (method: string, routePath: string, line: number): ServerEndpoint => {
+      const handlerBlock = lines.slice(line - 1, Math.min(lines.length, line + 35)).join('\n');
+      return {
+        method,
+        endpoint: routePath,
+        filePath: relPath,
+        line,
+        expectedBodyKeys: this.extractExpectedBodyKeys(handlerBlock),
+        expectedQueryKeys: this.extractExpectedQueryKeys(handlerBlock)
+      };
+    };
+    const results: ServerEndpoint[] = [];
+
+    if (facts.grammar === 'python') {
+      // `router = APIRouter(prefix="/items")`; a file with one router applies its prefix to its routes
+      const routerPrefix = content.match(/APIRouter\(\s*[^)]*prefix\s*=\s*['"]([^'"]+)['"]/)?.[1] ?? '';
+      facts.symbols.forEach(symbol => {
+        symbol.decorators.forEach(decorator => {
+          const fastApi = decorator.match(/^@\w+\.(get|post|put|patch|delete)\(/i);
+          const flask = decorator.match(/^@\w+\.route\(/);
+          if (fastApi) {
+            const prefix = /^@router\./.test(decorator) ? routerPrefix : '';
+            results.push(endpoint(fastApi[1].toUpperCase(), join(prefix, firstString(decorator)), symbol.startLine));
+          } else if (flask) {
+            const methods = decorator.match(/methods\s*=\s*\[([^\]]*)\]/)?.[1].match(/['"](\w+)['"]/g)?.map(m => m.slice(1, -1).toUpperCase()) ?? ['GET'];
+            methods.forEach(method => results.push(endpoint(method, join(firstString(decorator)), symbol.startLine)));
+          }
+        });
+      });
+      return results;
+    }
+
+    // Express/Fastify/Koa routes written across lines (`router.get(\n  '/articles/feed', ...)`), from call facts
+    facts.calls.forEach(call => {
+      const verb = call.callee.match(/^(?:app|server|api|\w*[Rr]outer)\.(get|post|put|patch|delete|all)$/);
+      if (verb && call.firstStringArg?.startsWith('/') && !lines[call.line - 1]?.includes(call.firstStringArg)) {
+        results.push(endpoint(verb[1].toUpperCase(), call.firstStringArg, call.line));
+      }
+    });
+
+    // NestJS: class prefix from @Controller, method routes from @Get/@Post/...
+    const controllers = new Map<string, string>();
+    facts.symbols.filter(s => s.kind === 'class').forEach(cls => {
+      const controller = cls.decorators.find(d => /^@Controller\b/.test(d));
+      if (controller) controllers.set(cls.name, firstString(controller));
+    });
+    facts.symbols.filter(s => s.kind === 'method').forEach(method => {
+      const className = method.qualifiedName.split('.')[0];
+      if (!controllers.has(className)) return;
+      method.decorators.forEach(decorator => {
+        const verb = decorator.match(/^@(Get|Post|Put|Patch|Delete|All)\b/);
+        if (verb) results.push(endpoint(verb[1].toUpperCase(), join(globalPrefix, controllers.get(className)!, firstString(decorator)), method.startLine));
+      });
+    });
+    return results;
   }
 
   /**

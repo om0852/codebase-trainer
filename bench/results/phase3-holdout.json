@@ -1,0 +1,637 @@
+{
+  "label": "phase3",
+  "date": "2026-11-02T04:08:57.391Z",
+  "split": "holdout",
+  "repos": {
+    "taxonomy": {
+      "files": 140,
+      "trackedFiles": 169,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 552,
+        "bytes": 1615040
+      },
+      "latency": {
+        "p50": 97,
+        "p95": 431
+      },
+      "tool": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.4,
+          "hitAt5": 1,
+          "mrr": 0.667,
+          "medianTokens": 1475,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.25,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0,
+          "hitAt5": 0.4,
+          "mrr": 0.14,
+          "medianTokens": 14323,
+          "answeredAt20": 0.8
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.25,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "tx-locate-05",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1573
+          },
+          {
+            "id": "tx-locate-09",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 1475
+          },
+          {
+            "id": "tx-locate-13",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 3534
+          },
+          {
+            "id": "tx-locate-17",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 402
+          },
+          {
+            "id": "tx-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 424
+          },
+          {
+            "id": "tx-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.167,
+            "tokensToAnswer": null
+          }
+        ],
+        "grep": [
+          {
+            "id": "tx-locate-05",
+            "type": "locate",
+            "firstHit": 11,
+            "recallAt10": 0,
+            "tokensToAnswer": 22423
+          },
+          {
+            "id": "tx-locate-09",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-locate-13",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 102447
+          },
+          {
+            "id": "tx-locate-17",
+            "type": "locate",
+            "firstHit": 5,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 2727
+          },
+          {
+            "id": "tx-locate-20",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 6222
+          },
+          {
+            "id": "tx-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.167,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "tx-feature-05",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "express-realworld": {
+      "files": 58,
+      "trackedFiles": 64,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 346,
+        "bytes": 3256181
+      },
+      "latency": {
+        "p50": 102,
+        "p95": 299
+      },
+      "tool": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.6,
+          "hitAt5": 1,
+          "mrr": 0.707,
+          "medianTokens": 3345,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.75,
+          "fullyCoveredAt20": 0.5,
+          "medianTokens": 7986
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.2,
+          "hitAt5": 1,
+          "mrr": 0.467,
+          "medianTokens": 4386,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.416,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "ex-locate-05",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1062
+          },
+          {
+            "id": "ex-locate-08",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 129
+          },
+          {
+            "id": "ex-locate-11",
+            "type": "locate",
+            "firstHit": 5,
+            "recallAt10": 1,
+            "tokensToAnswer": 6141
+          },
+          {
+            "id": "ex-locate-15",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 4978
+          },
+          {
+            "id": "ex-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-feature-02",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.833,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-06",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": 7986
+          }
+        ],
+        "grep": [
+          {
+            "id": "ex-locate-05",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 2723
+          },
+          {
+            "id": "ex-locate-08",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 4386
+          },
+          {
+            "id": "ex-locate-11",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 99574
+          },
+          {
+            "id": "ex-locate-15",
+            "type": "locate",
+            "firstHit": 3,
+            "recallAt10": 1,
+            "tokensToAnswer": 4437
+          },
+          {
+            "id": "ex-locate-18",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 3345
+          },
+          {
+            "id": "ex-feature-02",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ex-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "nestjs-realworld": {
+      "files": 43,
+      "trackedFiles": 118,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 261,
+        "bytes": 3119620
+      },
+      "latency": {
+        "p50": 158,
+        "p95": 243
+      },
+      "tool": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.8,
+          "hitAt5": 0.8,
+          "mrr": 0.818,
+          "medianTokens": 1615,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.691,
+          "fullyCoveredAt20": 1,
+          "medianTokens": 56088
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.4,
+          "hitAt5": 0.6,
+          "mrr": 0.5,
+          "medianTokens": 1615,
+          "answeredAt20": 0.6
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.452,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "ne-locate-05",
+            "type": "locate",
+            "firstHit": 11,
+            "recallAt10": 0,
+            "tokensToAnswer": 4008
+          },
+          {
+            "id": "ne-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-13",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 937
+          },
+          {
+            "id": "ne-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.714,
+            "tokensToAnswer": 105623
+          },
+          {
+            "id": "ne-feature-06",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.667,
+            "tokensToAnswer": 6553
+          }
+        ],
+        "grep": [
+          {
+            "id": "ne-locate-05",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-13",
+            "type": "locate",
+            "firstHit": null,
+            "recallAt10": 0,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-locate-16",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 0.5,
+            "tokensToAnswer": 1615
+          },
+          {
+            "id": "ne-locate-20",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3476
+          },
+          {
+            "id": "ne-feature-03",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.571,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "ne-feature-06",
+            "type": "feature",
+            "firstHit": 2,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    },
+    "t3-turbo": {
+      "files": 116,
+      "trackedFiles": 136,
+      "notIndexed": [],
+      "index": {
+        "buildMs": 323,
+        "bytes": 962774
+      },
+      "latency": {
+        "p50": 66,
+        "p95": 307
+      },
+      "tool": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0.8,
+          "hitAt5": 0.8,
+          "mrr": 0.825,
+          "medianTokens": 311,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.607,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "grep": {
+        "locate": {
+          "count": 5,
+          "hitAt1": 0,
+          "hitAt5": 0.8,
+          "mrr": 0.365,
+          "medianTokens": 4001,
+          "answeredAt20": 1
+        },
+        "feature": {
+          "count": 2,
+          "recallAt10": 0.381,
+          "fullyCoveredAt20": 0,
+          "medianTokens": null
+        }
+      },
+      "questions": {
+        "tool": [
+          {
+            "id": "t3-locate-05",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 186
+          },
+          {
+            "id": "t3-locate-09",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 345
+          },
+          {
+            "id": "t3-locate-13",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 311
+          },
+          {
+            "id": "t3-locate-17",
+            "type": "locate",
+            "firstHit": 8,
+            "recallAt10": 1,
+            "tokensToAnswer": 4488
+          },
+          {
+            "id": "t3-locate-20",
+            "type": "locate",
+            "firstHit": 1,
+            "recallAt10": 1,
+            "tokensToAnswer": 154
+          },
+          {
+            "id": "t3-feature-03",
+            "type": "feature",
+            "firstHit": 1,
+            "recallAt10": 0.714,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-06",
+            "type": "feature",
+            "firstHit": 3,
+            "recallAt10": 0.5,
+            "tokensToAnswer": null
+          }
+        ],
+        "grep": [
+          {
+            "id": "t3-locate-05",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3876
+          },
+          {
+            "id": "t3-locate-09",
+            "type": "locate",
+            "firstHit": 4,
+            "recallAt10": 1,
+            "tokensToAnswer": 6285
+          },
+          {
+            "id": "t3-locate-13",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 4001
+          },
+          {
+            "id": "t3-locate-17",
+            "type": "locate",
+            "firstHit": 13,
+            "recallAt10": 0,
+            "tokensToAnswer": 9971
+          },
+          {
+            "id": "t3-locate-20",
+            "type": "locate",
+            "firstHit": 2,
+            "recallAt10": 1,
+            "tokensToAnswer": 3844
+          },
+          {
+            "id": "t3-feature-03",
+            "type": "feature",
+            "firstHit": 5,
+            "recallAt10": 0.429,
+            "tokensToAnswer": null
+          },
+          {
+            "id": "t3-feature-06",
+            "type": "feature",
+            "firstHit": 3,
+            "recallAt10": 0.333,
+            "tokensToAnswer": null
+          }
+        ]
+      }
+    }
+  },
+  "overall": {
+    "tool": {
+      "locate": {
+        "count": 20,
+        "hitAt1": 0.65,
+        "hitAt5": 0.9,
+        "mrr": 0.754,
+        "medianTokens": 1524,
+        "answeredAt20": 1
+      },
+      "feature": {
+        "count": 8,
+        "recallAt10": 0.574,
+        "fullyCoveredAt20": 0.375,
+        "medianTokens": 7986
+      }
+    },
+    "grep": {
+      "locate": {
+        "count": 20,
+        "hitAt1": 0.15,
+        "hitAt5": 0.7,
+        "mrr": 0.368,
+        "medianTokens": 4001,
+        "answeredAt20": 0.85
+      },
+      "feature": {
+        "count": 8,
+        "recallAt10": 0.375,
+        "fullyCoveredAt20": 0,
+        "medianTokens": null
+      }
+    }
+  }
+}

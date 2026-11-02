@@ -4,8 +4,10 @@ import { ASTFact } from '../types/index.js';
 import { ImportResolver } from '../graph/importResolver.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { CodeFacts, extractCodeFacts } from '../parsing/codeFacts.js';
+import { adapterEdges, buildRepoIndex } from './adapters.js';
 
-export type FlowEdgeKind = 'call' | 'reference' | 'http';
+// `data`: a query against a data model (Prisma model, TypeORM entity) — the end of most request flows
+export type FlowEdgeKind = 'call' | 'reference' | 'http' | 'data';
 
 export interface FlowEdge {
   kind: FlowEdgeKind;
@@ -55,6 +57,7 @@ export class CallSiteExtractor {
     };
 
     const edges: FlowEdge[] = [];
+    const repoIndex = buildRepoIndex(repoPath, facts, read);
     facts.forEach(fact => {
       if (!['typescript', 'javascript', 'python'].includes(fact.language)) return;
       const content = read(fact.filePath);
@@ -66,6 +69,28 @@ export class CallSiteExtractor {
       const tree = extractCodeFacts(fact.filePath, content);
       if (tree) {
         edges.push(...this.treeEdges(fact, tree, lines, resolver, read, toRel));
+        edges.push(...adapterEdges({
+          fact,
+          tree,
+          lines,
+          fromRel: toRel(fact.filePath),
+          callerOf: call => {
+            const symbol = call.enclosing ?? this.registeredCallback(lines, call.line - 1);
+            return call.outermost && call.outermost !== symbol ? { symbol, within: call.outermost } : { symbol };
+          },
+          resolveLocal: local => {
+            const imp = tree.imports.find(i => i.bindings.some(b => b.local === local));
+            const target = imp ? resolver.resolve(fact.filePath, imp.specifier, fact.language) : null;
+            if (!target) return null;
+            const targetContent = read(target);
+            const targetFacts = extractCodeFacts(target, targetContent);
+            return {
+              filePath: toRel(target),
+              lineOf: symbol => targetFacts?.symbols.find(s => s.qualifiedName === symbol || s.name === symbol)?.startLine
+                ?? this.findDefinitionLine(targetContent, symbol)
+            };
+          }
+        }, repoIndex));
         return;
       }
 
@@ -173,8 +198,10 @@ export class CallSiteExtractor {
           if (call.callee === binding.local) {
             symbol = base;
           } else if (call.callee.startsWith(binding.local + '.')) {
-            const member = call.callee.slice(binding.local.length + 1).split('.')[0];
-            symbol = binding.imported === '*' ? member : `${base}.${member}`;
+            const members = call.callee.slice(binding.local.length + 1).split('.');
+            // `db.post.count()` reaches into an object (a Prisma model here, handled as a data edge); only
+            // `binding.fn()` is a call to something the imported module defines
+            if (members.length === 1) symbol = binding.imported === '*' ? members[0] : `${base}.${members[0]}`;
           }
           if (symbol) add('call', call.line, call.enclosing, targetRel, symbol, definitionLine(symbol), call.outermost);
         });

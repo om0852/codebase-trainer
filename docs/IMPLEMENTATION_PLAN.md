@@ -144,6 +144,17 @@ Each adapter emits `http_edges` / `rpc_edges` with evidence:
 
 **Done when:** on the benchmark repos, ≥80% of client requests are linked to a server handler (measured against a hand-labelled set), and flow traces reach the data layer.
 
+**Status (core done):** adapters in `src/flow/adapters.ts` plus route extraction in `contractDrift.ts`:
+- **Prisma:** `.prisma` schemas indexed; `db.<model>.<operation>()` → `data` edges to the model.
+- **Drizzle:** `insert/update/delete/from(Table)` and `db.query.<Table>.findMany()` → `data` edges to `pgTable`-style definitions.
+- **Dependency injection:** constructor parameter properties and typed fields; `this.svc.method()` → `Service.method`, `Repository<Entity>` / `Model<T>` → `data` edges.
+- **Routes:** NestJS `@Controller` + `@Get…` (with `setGlobalPrefix`), FastAPI (`APIRouter(prefix=…)`), Flask `@route(methods=…)`, multi-line Express routes; Next.js `route.tsx` paths fixed.
+- **tRPC:** client `trpc.<router>.<procedure>.<request op>()` → the procedure, through nested routers; procedure handlers are named `<router>.<procedure>`.
+- **Clients:** fetch wrappers (first parameter passed into fetch/axios) and `axios.create({ baseURL })` instances.
+- **Monorepos:** workspace packages resolved through `package.json` `exports` (pulled forward from Phase 2): schema impact in create-t3-turbo went from 1 direct / 0 transitive dependents to 4 / 25.
+
+Measured (`npm run bench:links`): 18 of 18 request sites linked (100%; small sample — taxonomy 5, express 1, t3-turbo 12 tRPC calls); routes found 8 → 20 (Express) and 0 → 21 (NestJS); data-layer edges 0 → 96 across the corpus. Retrieval vs 1.4.0: hit@1 56% → 59%, MRR 0.69 → 0.70, feature recall@10 54% → 58%, and no ground-truth file is unindexed any more. Not yet done: GraphQL resolvers, OpenAPI clients, Express `app.use('/prefix', router)` mount prefixes, React Query / SWR `queryFn` indirection, and an independent hand-labelled linking set (the current check counts link coverage, not correctness).
+
 ---
 
 ## 7. Phase 4 — `feature_slice`: the flagship tool (weeks 9–10)

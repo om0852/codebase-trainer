@@ -32,6 +32,64 @@ export class ImportResolver {
   private constructor(repoPath: string, facts: ASTFact[]) {
     this.repoPath = path.resolve(repoPath);
     facts.forEach(f => this.fileIndex.set(ImportResolver.normalize(f.filePath), f.filePath));
+    facts.filter(f => path.basename(f.filePath) === 'package.json' && !/[\\/]node_modules[\\/]/.test(f.filePath)).forEach(f => {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(f.filePath, 'utf8'));
+        if (typeof pkg.name === 'string') this.workspacePackages.set(pkg.name, { dir: path.dirname(f.filePath), manifest: pkg });
+      } catch {
+        // Unparseable manifest: imports of that package stay unresolved
+      }
+    });
+  }
+
+  // Monorepo workspace packages by name (`@acme/db` -> packages/db), from every package.json in the repo
+  private readonly workspacePackages = new Map<string, { dir: string; manifest: { exports?: unknown; main?: string; module?: string } }>();
+
+  /**
+   * `@acme/db/schema` -> the file its package.json `exports["./schema"]` points to (any condition that resolves to
+   * an indexed file, so `default: ./src/schema.ts` wins over `types: ./dist/schema.d.ts`), else `<pkg>/src/schema.*`.
+   */
+  private resolveWorkspacePackage(specifier: string): string | null {
+    const name = [...this.workspacePackages.keys()]
+      .filter(n => specifier === n || specifier.startsWith(n + '/'))
+      .sort((a, b) => b.length - a.length)[0];
+    if (!name) return null;
+    const { dir, manifest } = this.workspacePackages.get(name)!;
+    const subpath = specifier === name ? '.' : './' + specifier.slice(name.length + 1);
+
+    const targets: string[] = [];
+    const collect = (value: unknown) => {
+      if (typeof value === 'string') targets.push(value);
+      else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(collect);
+    };
+    const exportsField = manifest.exports;
+    if (typeof exportsField === 'string' && subpath === '.') {
+      targets.push(exportsField);
+    } else if (exportsField && typeof exportsField === 'object') {
+      const map = exportsField as Record<string, unknown>;
+      if (map[subpath] !== undefined) {
+        collect(map[subpath]);
+      } else {
+        // Wildcard subpaths: `"./*": "./src/*.ts"`
+        Object.entries(map).forEach(([pattern, value]) => {
+          const captured = ImportResolver.matchPathPattern(pattern, subpath);
+          if (captured !== null && pattern.includes('*')) {
+            const before = targets.length;
+            collect(value);
+            for (let i = before; i < targets.length; i++) targets[i] = targets[i].replace('*', captured);
+          }
+        });
+      }
+    }
+    if (subpath === '.') [manifest.module, manifest.main].forEach(v => typeof v === 'string' && targets.push(v));
+
+    for (const target of targets) {
+      const resolved = this.matchJsTsCandidates(path.resolve(dir, target));
+      if (resolved) return resolved;
+    }
+    // No (indexed) export target: try the conventional source layout
+    const rest = subpath === '.' ? 'index' : subpath.slice(2);
+    return this.matchJsTsCandidates(path.join(dir, 'src', rest)) ?? this.matchJsTsCandidates(path.join(dir, rest));
   }
 
   public static forFacts(repoPath: string, facts: ASTFact[]): ImportResolver {
@@ -97,6 +155,10 @@ export class ImportResolver {
         : path.resolve(path.dirname(fromFile), specifier);
       return this.matchJsTsCandidates(base);
     }
+
+    // Monorepo workspace packages (`@acme/db/schema`)
+    const workspace = this.resolveWorkspacePackage(specifier);
+    if (workspace) return workspace;
 
     // tsconfig/jsconfig path aliases (e.g. `@/lib/store` -> `src/lib/store.ts`) and baseUrl imports
     const config = this.aliasConfigFor(fromFile);

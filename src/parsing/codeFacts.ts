@@ -43,6 +43,8 @@ export interface CallFact {
   // Outermost named function containing the call (e.g. the component that declares the `onSubmit` handler)
   outermost?: string;
   form: 'call' | 'new' | 'jsx';
+  // First argument when it is a string or template literal, unquoted (`router.get('/articles', ...)` -> `/articles`)
+  firstStringArg?: string;
 }
 
 export interface ValueReference {
@@ -52,12 +54,23 @@ export interface ValueReference {
   enclosing?: string;
 }
 
+export interface ClassMemberType {
+  className: string;
+  // Property name as used in `this.<property>`
+  property: string;
+  // Declared type as written, e.g. `ArticleService` or `Repository<ArticleEntity>`
+  type: string;
+  line: number;
+}
+
 export interface CodeFacts {
   grammar: GrammarName;
   symbols: SymbolFact[];
   imports: ImportFact[];
   calls: CallFact[];
   valueRefs: ValueReference[];
+  // Typed constructor parameter properties and fields (dependency injection: `private readonly svc: Service`)
+  memberTypes: ClassMemberType[];
   hasSyntaxErrors: boolean;
 }
 
@@ -110,6 +123,18 @@ function calleeName(fn: Node): string {
 const unquote = (text: string) => text.replace(/^['"`]|['"`]$/g, '');
 const collapse = (text: string) => text.replace(/\s+/g, ' ').trim().slice(0, 200);
 
+// Unquoted value of a string or template-literal argument (`'/api/keys'`, `` `/api/keys/${id}` ``), else undefined
+function stringValue(node: Node | null | undefined): string | undefined {
+  if (!node || !['string', 'template_string'].includes(node.type)) return undefined;
+  return node.text.slice(1, -1);
+}
+
+// `: Repository<ArticleEntity>` -> `Repository<ArticleEntity>`
+function typeText(annotation: Node | null): string | undefined {
+  const text = annotation?.text.replace(/^:\s*/, '').replace(/\s+/g, '');
+  return text || undefined;
+}
+
 function signatureOf(node: Node): string {
   const body = node.childForFieldName('body');
   const text = body ? node.text.slice(0, body.startIndex - node.startIndex) : node.text.split('\n')[0];
@@ -137,6 +162,7 @@ function jsFacts(root: Node, grammar: GrammarName): CodeFacts {
   const imports: ImportFact[] = [];
   const calls: CallFact[] = [];
   const valueRefs: ValueReference[] = [];
+  const memberTypes: ClassMemberType[] = [];
 
   const exportInfo = (node: Node) => {
     // `export function f`, `export default class C`, `export const f = () => ...`
@@ -184,7 +210,18 @@ function jsFacts(root: Node, grammar: GrammarName): CodeFacts {
       const cls = enclosingClass(parent);
       return name ? (cls ? `${cls}.${name}` : name) : undefined;
     }
-    if (parent?.type === 'pair') return parent.childForFieldName('key')?.text;
+    // Object members: `{ onClick: () => ... }` directly, or through a call chain such as a tRPC procedure
+    // `create: protectedProcedure.input(schema).mutation(({ ctx }) => ...)`; named `<object variable>.<key>`
+    let holder: Node | null = parent ?? null;
+    while (holder && ['arguments', 'call_expression', 'member_expression', 'await_expression'].includes(holder.type)) holder = holder.parent;
+    if (holder?.type === 'pair') {
+      const key = holder.childForFieldName('key')?.text;
+      if (!key) return undefined;
+      let owner: Node | null = holder.parent;
+      for (let hops = 0; owner && hops < 4 && owner.type !== 'variable_declarator'; hops++) owner = owner.parent;
+      const objectName = owner?.type === 'variable_declarator' ? owner.childForFieldName('name')?.text : undefined;
+      return objectName ? `${objectName}.${key}` : key;
+    }
     return undefined;
   };
 
@@ -281,11 +318,27 @@ function jsFacts(root: Node, grammar: GrammarName): CodeFacts {
       case 'public_field_definition':
       case 'field_definition': {
         const value = node.childForFieldName('value');
+        const name = node.childForFieldName('name')?.text ?? node.childForFieldName('property')?.text;
+        const cls = enclosingClass(node);
         if (value && ['arrow_function', 'function_expression'].includes(value.type)) {
-          const name = node.childForFieldName('name')?.text ?? node.childForFieldName('property')?.text;
-          const cls = enclosingClass(node);
           addSymbol(node, name, 'method', name && cls ? `${cls}.${name}` : name);
+        } else {
+          // Typed field: `@Inject() private readonly mailer: Mailer;`
+          const type = typeText(node.childForFieldName('type'));
+          if (name && cls && type) memberTypes.push({ className: cls, property: name, type, line: line(node) });
         }
+        break;
+      }
+      case 'required_parameter':
+      case 'optional_parameter': {
+        // Constructor parameter property: `constructor(private readonly articleService: ArticleService)`
+        const isProperty = node.children.some(c => c?.type === 'accessibility_modifier' || c?.type === 'readonly' || c?.type === 'override_modifier');
+        const method = node.parent?.parent;
+        if (!isProperty || method?.type !== 'method_definition' || method.childForFieldName('name')?.text !== 'constructor') break;
+        const name = node.childForFieldName('pattern')?.text;
+        const type = typeText(node.childForFieldName('type'));
+        const cls = enclosingClass(node);
+        if (name && cls && type) memberTypes.push({ className: cls, property: name, type, line: line(node) });
         break;
       }
       case 'import_statement':
@@ -307,7 +360,7 @@ function jsFacts(root: Node, grammar: GrammarName): CodeFacts {
         } else if (fn.type === 'identifier' && fn.text === 'require' && firstArg?.type === 'string') {
           imports.push(requireImport(node, unquote(firstArg.text)));
         } else {
-          calls.push({ callee: calleeName(fn), line: line(node), enclosing: enclosingOf(node), outermost: outermostOf(node), form: 'call' });
+          calls.push({ callee: calleeName(fn), line: line(node), enclosing: enclosingOf(node), outermost: outermostOf(node), form: 'call', firstStringArg: stringValue(firstArg) });
         }
         break;
       }
@@ -336,7 +389,7 @@ function jsFacts(root: Node, grammar: GrammarName): CodeFacts {
     }
   });
 
-  return { grammar, symbols, imports, calls, valueRefs, hasSyntaxErrors: root.hasError };
+  return { grammar, symbols, imports, calls, valueRefs, memberTypes, hasSyntaxErrors: root.hasError };
 }
 
 function jsImport(node: Node): ImportFact {
@@ -475,7 +528,7 @@ function pythonFacts(root: Node): CodeFacts {
       }
       case 'call': {
         const fn = node.childForFieldName('function');
-        if (fn) calls.push({ callee: calleeName(fn), line: line(node), enclosing: enclosingOf(node), outermost: outermostOf(node), form: 'call' });
+        if (fn) calls.push({ callee: calleeName(fn), line: line(node), enclosing: enclosingOf(node), outermost: outermostOf(node), form: 'call', firstStringArg: stringValue(node.childForFieldName('arguments')?.namedChildren[0]) });
         break;
       }
       case 'identifier': {
@@ -488,5 +541,5 @@ function pythonFacts(root: Node): CodeFacts {
     }
   });
 
-  return { grammar: 'python', symbols, imports, calls, valueRefs, hasSyntaxErrors: root.hasError };
+  return { grammar: 'python', symbols, imports, calls, valueRefs, memberTypes: [], hasSyntaxErrors: root.hasError };
 }

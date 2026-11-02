@@ -70,7 +70,7 @@ export class IntentClassifier {
     if (/^use[A-Z]/.test(fileName) || hasDir('hooks', 'composables')) return result('hook', 0.9);
     if (hasDir('store', 'stores', 'state', 'redux', 'slices') || /(store|slice)$/.test(stem)) return result('store', 0.85);
     if (hasDir('components', 'ui', 'widgets') || ['.tsx', '.jsx', '.vue', '.svelte'].includes(ext)) return result('ui_component', 0.85);
-    if (hasDir('models', 'entities', 'schemas', 'types', 'prisma', 'migrations') || /\.(model|entity|schema|dto)$/.test(stem) || stem === 'types' || ext === '.sql') {
+    if (hasDir('models', 'entities', 'schemas', 'types', 'prisma', 'migrations') || /\.(model|entity|schema|dto)$/.test(stem) || stem === 'types' || ext === '.sql' || ext === '.prisma') {
       return result('data_model', 0.85);
     }
     if (hasDir('cli', 'bin', 'commands', 'cmd')) return result('cli_entry', 0.85);

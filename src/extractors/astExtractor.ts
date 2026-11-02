@@ -13,7 +13,7 @@ const IGNORED_DIRS = [
 ];
 const SOURCE_EXTENSIONS = [
   '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java',
-  '.c', '.cpp', '.cc', '.h', '.hpp', '.sql', '.php', '.md', '.markdown', '.json'
+  '.c', '.cpp', '.cc', '.h', '.hpp', '.sql', '.prisma', '.php', '.md', '.markdown', '.json'
 ];
 // Skip giant data files
 const MAX_FILE_BYTES = 500 * 1024;
@@ -72,6 +72,8 @@ export class ASTExtractor {
       language = 'cpp';
     } else if (ext === '.sql') {
       language = 'sql';
+    } else if (ext === '.prisma') {
+      language = 'prisma';
     } else if (ext === '.php') {
       language = 'php';
     } else if (['.md', '.markdown', '.json'].includes(ext)) {
@@ -208,6 +210,11 @@ export class ASTExtractor {
       for (const m of javaMatches) {
         if (m[1]) symbols.add(m[1]);
       }
+    }
+
+    // Prisma models, enums and views
+    if (ext === '.prisma') {
+      for (const m of content.matchAll(/^\s*(?:model|enum|view|type)\s+([A-Za-z_]\w*)\s*\{/gm)) symbols.add(m[1]);
     }
 
     // SQL tables and views

@@ -256,6 +256,21 @@ export class ExecutionFlowTracer {
       }));
     }
 
+    // Data-layer queries made by functions on the path end the flow at the model they touch
+    const onPathSymbols = new Set<string>();
+    selected.forEach(e => {
+      if (e.to.symbol) onPathSymbols.add(`${e.to.filePath}#${e.to.symbol}`);
+      if (e.from.symbol) onPathSymbols.add(`${e.from.filePath}#${e.from.symbol}`);
+    });
+    const selectedFiles = new Set<string>([...onPath]);
+    selected.forEach(e => { selectedFiles.add(e.from.filePath); selectedFiles.add(e.to.filePath); });
+    selectedFiles.forEach(file => (outEdges.get(file) || []).forEach(e => {
+      if (e.kind !== 'data') return;
+      const caller = `${e.from.filePath}#${e.from.symbol || ''}`;
+      const outer = e.from.within ? `${e.from.filePath}#${e.from.within}` : '';
+      if (onPathSymbols.has(caller) || onPathSymbols.has(outer) || seeds.includes(e.from.filePath)) selected.add(e);
+    }));
+
     return Array.from(selected);
   }
 
@@ -318,7 +333,9 @@ export class ExecutionFlowTracer {
       aliasFor(edge.to.filePath);
       const fromName = edge.from.symbol || path.basename(edge.from.filePath);
       const target = `${edge.to.filePath}${edge.to.line ? `:${edge.to.line}` : ''}`;
-      const verb = edge.kind === 'http' ? `sends \`${edge.label}\` to` : edge.kind === 'call' ? 'calls' : 'passes';
+      const verb = edge.kind === 'http' ? `sends \`${edge.label}\` to`
+        : edge.kind === 'data' ? `runs \`${edge.label}\` on`
+        : edge.kind === 'call' ? 'calls' : 'passes';
       const toName = edge.kind === 'http' ? `\`${edge.to.symbol || 'handler'}\`` : `\`${edge.to.symbol}\``;
       const lines = linesOf(edge.from.filePath);
       const start = Math.max(1, edge.from.line - 1);
@@ -326,7 +343,7 @@ export class ExecutionFlowTracer {
 
       return {
         stepNumber: idx + 1,
-        title: `${fromName} ${edge.kind === 'http' ? edge.label : `-> ${edge.to.symbol}`}`,
+        title: `${fromName} ${edge.kind === 'http' || edge.kind === 'data' ? edge.label : `-> ${edge.to.symbol}`}`,
         filePath: edge.from.filePath,
         lineRange: `L${edge.from.line}`,
         description: `\`${fromName}\` (${edge.from.filePath}:${edge.from.line}) ${verb} ${toName} in ${target}.`,
@@ -362,6 +379,8 @@ export class ExecutionFlowTracer {
       const caller = s.edge.from.symbol ? `${clean(s.edge.from.symbol)}: ` : '';
       if (s.edge.kind === 'http') {
         lines.push(`  ${from}->>${to}: ${caller}HTTP ${clean(s.edge.label || '')}`);
+      } else if (s.edge.kind === 'data') {
+        lines.push(`  ${from}->>${to}: ${caller}${clean(s.edge.label || '')}`);
       } else if (s.edge.kind === 'call') {
         lines.push(`  ${from}->>${to}: ${caller}${clean(s.edge.to.symbol || '')}()`);
       } else {

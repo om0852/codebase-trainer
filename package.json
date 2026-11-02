@@ -18,6 +18,7 @@
     "test": "tsx --test \"tests/**/*.test.ts\"",
     "bench": "tsx bench/run.ts",
     "bench:setup": "tsx bench/corpus.ts",
+    "bench:links": "tsx bench/links.ts",
     "security": "node dist/cli/index.js security",
     "audit": "node dist/cli/index.js audit",
     "ci": "node dist/cli/index.js ci",

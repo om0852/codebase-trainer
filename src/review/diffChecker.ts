@@ -173,7 +173,7 @@ export class DiffChecker {
     // The file's existing style (lines not added by this diff) decides whether a pattern is already accepted there
     const existingCount = (regex: RegExp) =>
       Math.max(0, (currentCode.match(new RegExp(regex.source, 'g')) || []).length - addedCode.filter(t => regex.test(t)).length);
-    const isCliOrScript = /^#!/.test(current) || /\.command\(\s*['"`]/.test(currentCode) || /(^|\/)(scripts?|bin|examples?)\//.test(file.filePath);
+    const isCliOrScript = /^#!/.test(current) || /\.command\(\s*['"`]/.test(currentCode) || /(^|\/)(scripts?|bin|examples?|bench(marks?)?|tools)\//.test(file.filePath);
     const servesHttp = isJsTs && (
       /(^|\/)route\.(t|j)s$/.test(file.filePath) || /(^|\/)pages\/api\//.test(file.filePath)
       || /\b(?:app|router|server)\.(?:get|post|put|delete|patch)\s*\(\s*['"`]/.test(currentCode)
