@@ -15,6 +15,7 @@ import { CallGraphAnalyzer } from '../graph/callGraph.js';
 import { ImpactAnalyzer } from '../graph/impactAnalyzer.js';
 import { GlobalIndexManager } from '../multi/globalIndex.js';
 import { ContextPackGenerator } from '../context/contextPack.js';
+import { FeatureSliceBuilder } from '../context/featureSlice.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
 import { OnboardingDocsGenerator } from '../enterprise/onboardingDocs.js';
 import { RouteRegistryManager } from '../microservices/routeRegistry.js';
@@ -176,6 +177,32 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
               feature: {
                 type: 'string',
                 description: 'Feature or architectural query (e.g., E2EE encryption flow, user login, BM25 search).',
+              },
+            },
+            required: ['feature'],
+          },
+        },
+        {
+          name: 'feature_slice',
+          description: 'Everything an agent needs to change one feature, across layers (UI -> client -> route -> service -> data model), within a token budget. Seeds from search, expands along call, HTTP and data edges, and returns files by layer with why each was included, the flows between them, and signatures/snippets packed to the budget.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              feature: {
+                type: 'string',
+                description: 'Feature to change, in plain words (e.g. "article comments", "subscription billing").',
+              },
+              budget_tokens: {
+                type: 'number',
+                description: 'Token budget for the packed slice (default 6000).',
+              },
+              include_tests: {
+                type: 'boolean',
+                description: 'Also include test files (default false).',
+              },
+              include_docs: {
+                type: 'boolean',
+                description: 'Also include documentation files (default false).',
               },
             },
             required: ['feature'],
@@ -383,6 +410,22 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           {
             type: 'text',
             text: JSON.stringify(compactFlow, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (name === 'feature_slice') {
+      const slice = FeatureSliceBuilder.build(repoPath, String(args?.feature || ''), {
+        budgetTokens: args?.budget_tokens ? Number(args.budget_tokens) : undefined,
+        includeTests: Boolean(args?.include_tests),
+        includeDocs: Boolean(args?.include_docs),
+      });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(slice, null, 2),
           },
         ],
       };

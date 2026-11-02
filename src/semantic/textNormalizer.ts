@@ -13,7 +13,9 @@ const QUERY_STOPWORDS = new Set([
   'this', 'that', 'these', 'those', 'it', 'its', 'there', 'here',
   'i', 'me', 'my', 'we', 'our', 'us', 'you', 'your', 'they', 'their', 'them',
   'can', 'could', 'should', 'would', 'will', 'shall', 'may', 'might', 'must', 'has', 'have', 'had',
-  'please', 'work', 'works', 'happen', 'happens', 'handled', 'implemented', 'located', 'code'
+  'please', 'work', 'works', 'happen', 'happens', 'handled', 'implemented', 'located', 'code',
+  // Feature-question scaffolding: "everything involved in", "all the pieces behind", "what I need to touch"
+  'everything', 'involved', 'need', 'touch', 'pieces', 'piece', 'whole', 'entire', 'related', 'all'
 ]);
 
 // [suffix, replacement, minimum stem length left after removing the suffix]

@@ -14,6 +14,7 @@ import { DashboardGenerator } from '../ui/dashboardGenerator.js';
 import { AutoFixer } from '../fixer/autoFixer.js';
 import { GlobalIndexManager } from '../multi/globalIndex.js';
 import { ContextPackGenerator } from '../context/contextPack.js';
+import { FeatureSliceBuilder } from '../context/featureSlice.js';
 import { SarifExporter } from '../ci/sarifExporter.js';
 import { PRReviewer } from '../enterprise/prReviewer.js';
 import { DiffChecker } from '../review/diffChecker.js';
@@ -286,6 +287,43 @@ program
     console.log(`🚀 Generating developer onboarding guide for: ${repoPath}...`);
     const guidePath = OnboardingDocsGenerator.generateOnboardingGuide(repoPath);
     console.log(`✅ Onboarding guide generated at: ${guidePath}`);
+  });
+
+program
+  .command('slice <feature>')
+  .description('Cross-layer feature slice: the files, flows and code an agent needs to change one feature, within a token budget')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-b, --budget <number>', 'Token budget for packed code (default 6000)')
+  .option('--tests', 'Include test files')
+  .option('--docs', 'Include documentation files')
+  .option('-j, --json', 'Output the slice as raw JSON')
+  .action((feature, options) => {
+    const repoPath = path.resolve(options.dir);
+    const slice = FeatureSliceBuilder.build(repoPath, feature, {
+      budgetTokens: options.budget ? parseInt(options.budget, 10) : undefined,
+      includeTests: Boolean(options.tests),
+      includeDocs: Boolean(options.docs),
+    });
+
+    if (options.json) {
+      console.log(JSON.stringify(slice, null, 2));
+      return;
+    }
+
+    console.log(`🧩 Feature slice: "${feature}" (${slice.files.length} files, ~${slice.tokens} / ${slice.budgetTokens} tokens)`);
+    Object.entries(slice.layers).forEach(([layer, files]) => {
+      console.log(`\n[${layer}]`);
+      (files || []).forEach(file => {
+        const entry = slice.files.find(f => f.file === file);
+        console.log(`  ${file}${entry ? `  — ${entry.why}` : ''}`);
+      });
+    });
+    if (slice.flows.length > 0) {
+      console.log('\nFlows:');
+      slice.flows.forEach(flow => console.log(`  ${flow}`));
+    }
+    if (slice.omitted.length > 0) console.log(`\nOmitted ${slice.omitted.length} lower-ranked file(s) to stay within budget (use --json to see them).`);
+    slice.notes.forEach(note => console.log(`\nNote: ${note}`));
   });
 
 program

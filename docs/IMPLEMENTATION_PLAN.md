@@ -186,6 +186,17 @@ Output (compact JSON):
 
 **Done when:** on the `feature` question set, slice recall ≥0.85 with precision ≥0.6 inside 6k tokens, and tokens-to-answer at least 50% below grep-and-read.
 
+**Status (core done, targets partly met):** `src/context/featureSlice.ts`, exposed as the `feature_slice` MCP tool (`feature`, `budget_tokens`, `include_tests`, `include_docs`) and `cb-trainer slice "<feature>" [--budget] [--tests] [--docs] [--json]`. Seeds come from search. Expansion is best-first over call, import, HTTP and data edges, up to callers or down to callees but never down-then-up, with hub and shared-UI damping and a penalty for seeds unconnected to the rest. Output is files grouped by layer, each with a one-line reason, plus flows, edges, signatures for every file that fits, snippets around the matched code and an `omitted` list. Defaults (16 files, 20 seed hits) were tuned on the dev split and confirmed on holdout. On all 24 feature questions:
+
+| | Search, top 10 | `feature_slice`, one call |
+|---|---|---|
+| Recall of the labelled files | 59% | **83%** (dev 82%, holdout 84%) |
+| Features fully covered | 17% (top 20) | **50%** |
+| Median tokens | 7,506 (opening ranked files until all are found; answered questions only) | **4,552** (everything, packed) |
+| Precision | — | 33% |
+
+Recall misses 0.85 by two points, mostly on t3-turbo (61%: tRPC routers in a separate package rank low). Precision is well below 0.6. Part of that is the labels, which list the minimum file set, while the slice also returns mappers, auth helpers and models a change usually touches. But some of it is real noise from shared utilities. On this question set no setting reached both: precision peaks around 0.43, at 0.66 recall. So the default favours recall, because a missing file costs an agent another search while an extra signature costs a few dozen tokens. Not done yet: attaching related tests by import (`--tests` only admits tests that search or edges reach) and an `auth` layer (Phase 5).
+
 ---
 
 ## 8. Phase 5 — Permission map (weeks 11–12)

@@ -6,6 +6,7 @@ import { SemanticSearchEngine } from '../src/semantic/searchEngine.js';
 import { TextNormalizer } from '../src/semantic/textNormalizer.js';
 import { ASTExtractor } from '../src/extractors/astExtractor.js';
 import { TreeSitter } from '../src/parsing/treeSitter.js';
+import { FeatureSliceBuilder } from '../src/context/featureSlice.js';
 import { BENCH_DIR, CorpusRepo, ensureRepo, loadCorpus } from './corpus.js';
 
 /**
@@ -46,6 +47,25 @@ interface MethodSummary {
   feature: { count: number; recallAt10: number; fullyCoveredAt20: number; medianTokens: number | null };
 }
 
+// feature_slice on "feature" questions: everything the agent gets in one call, within the default budget
+interface SliceResult {
+  id: string;
+  recall: number;
+  precision: number;
+  covered: boolean;
+  tokens: number;
+  files: number;
+}
+
+interface SliceSummary {
+  count: number;
+  recall: number;
+  precision: number;
+  fullyCovered: number;
+  medianTokens: number | null;
+  medianFiles: number | null;
+}
+
 interface RepoReport {
   // Files the tool indexes vs tracked text files grep can see
   files: number;
@@ -56,7 +76,8 @@ interface RepoReport {
   latency: { p50: number; p95: number };
   tool: MethodSummary;
   grep: MethodSummary;
-  questions: { tool: QuestionResult[]; grep: QuestionResult[] };
+  slice: SliceSummary;
+  questions: { tool: QuestionResult[]; grep: QuestionResult[]; slice: SliceResult[] };
 }
 
 interface BenchReport {
@@ -64,7 +85,7 @@ interface BenchReport {
   date: string;
   split: string;
   repos: Record<string, RepoReport>;
-  overall: { tool: MethodSummary; grep: MethodSummary };
+  overall: { tool: MethodSummary; grep: MethodSummary; slice: SliceSummary };
 }
 
 const RANK_DEPTH = 20;
@@ -203,12 +224,26 @@ function benchRepo(repo: CorpusRepo, split: string): RepoReport | null {
 
   const tool: QuestionResult[] = [];
   const grep: QuestionResult[] = [];
+  const slice: SliceResult[] = [];
   const latencies: number[] = [];
   questions.forEach(q => {
     const t = toolRanking(root, q.question);
     latencies.push(t.ms);
     tool.push(scoreQuestion(q, t.files, fileTokens));
     grep.push(scoreQuestion(q, grepRanking(root, trackedFiles, contents, q.question).files, fileTokens));
+    if (q.type === 'feature') {
+      const s = FeatureSliceBuilder.build(root, q.question);
+      const inSlice = new Set(s.files.map(f => f.file));
+      const hits = q.files.filter(f => inSlice.has(f)).length;
+      slice.push({
+        id: q.id,
+        recall: round(hits / q.files.length),
+        precision: round(inSlice.size ? hits / inSlice.size : 0),
+        covered: hits === q.files.length,
+        tokens: s.tokens,
+        files: inSlice.size
+      });
+    }
   });
 
   return {
@@ -219,7 +254,20 @@ function benchRepo(repo: CorpusRepo, split: string): RepoReport | null {
     latency: { p50: Math.round(percentile(latencies, 50)), p95: Math.round(percentile(latencies, 95)) },
     tool: summarize(tool),
     grep: summarize(grep),
-    questions: { tool, grep }
+    slice: summarizeSlices(slice),
+    questions: { tool, grep, slice }
+  };
+}
+
+function summarizeSlices(results: SliceResult[]): SliceSummary {
+  const mean = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
+  return {
+    count: results.length,
+    recall: round(mean(results.map(r => r.recall))),
+    precision: round(mean(results.map(r => r.precision))),
+    fullyCovered: round(mean(results.map(r => (r.covered ? 1 : 0)))),
+    medianTokens: median(results.map(r => r.tokens)),
+    medianFiles: median(results.map(r => r.files))
   };
 }
 
@@ -239,6 +287,17 @@ function toMarkdown(report: BenchReport): string {
     lines.push(row(name, 'tool', r.tool), row(name, 'grep', r.grep));
   });
   lines.push(row('**all**', 'tool', report.overall.tool), row('**all**', 'grep', report.overall.grep));
+  const sliceRow = (name: string, s: SliceSummary) =>
+    `| ${name} | ${s.count} | ${pct(s.recall)} | ${pct(s.precision)} | ${pct(s.fullyCovered)} | ${tok(s.medianTokens)} | ${s.medianFiles ?? '—'} |`;
+  lines.push(
+    '',
+    '**feature_slice** on feature questions (one call, default 6,000-token budget):',
+    '',
+    '| Repo | Questions | Recall | Precision | Fully covered | Median tokens | Median files |',
+    '|---|---|---|---|---|---|---|',
+    ...Object.entries(report.repos).map(([name, r]) => sliceRow(name, r.slice)),
+    sliceRow('**all**', report.overall.slice)
+  );
   lines.push('', '| Repo | Indexed / tracked files | Index build | Index size | Search p50 | Search p95 | Ground-truth files not indexed |', '|---|---|---|---|---|---|---|');
   Object.entries(report.repos).forEach(([name, r]) => {
     lines.push(`| ${name} | ${r.files} / ${r.trackedFiles} | ${(r.index.buildMs / 1000).toFixed(1)} s | ${(r.index.bytes / 1024 / 1024).toFixed(1)} MB | ${r.latency.p50} ms | ${r.latency.p95} ms | ${r.notIndexed.length ? r.notIndexed.map(f => `\`${f}\``).join(', ') : 'none'} |`);
@@ -284,7 +343,8 @@ async function main() {
     repos,
     overall: {
       tool: summarize(all.flatMap(r => r.questions.tool)),
-      grep: summarize(all.flatMap(r => r.questions.grep))
+      grep: summarize(all.flatMap(r => r.questions.grep)),
+      slice: summarizeSlices(all.flatMap(r => r.questions.slice))
     }
   };
 

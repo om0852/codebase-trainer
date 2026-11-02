@@ -36,6 +36,7 @@ Search takes 60–150 ms per query on these repos (100–170 files each). The 28
 
 ## 🌟 Features
 
+1. **Feature slices (`cb-trainer slice`, MCP `feature_slice`)**: One call returns the files a feature spans, grouped by layer (UI, client, route, service, data model), each with the reason it was included, the call/request/data flows between them, and code packed to a token budget. On the benchmark's 24 feature questions it finds 83% of the labelled files in about 4,500 tokens; the top 10 search results find 59%.
 1. **Token-Budgeted Code Skeletons (`--max-tokens`)**: Compresses code into structural skeletons that keep classes, function signatures, interfaces and docstrings while replacing function bodies with placeholders.
 2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Parses frontend `fetch()` / `axios` calls and Express / Next.js route handlers, flagging method and payload mismatches, dead endpoints and orphan routes.
 3. **PageRank Graph Centrality (Aider style)**: Power-iteration PageRank over the resolved import graph, so central modules rank above one-off scripts.
@@ -63,7 +64,10 @@ npx cb-trainer search "user authentication token"
 # 3. Detect Client ↔ Server API Contract Drift & Payload Mismatches
 npx cb-trainer drift
 
-# 4. Generate AI Agent Token-Budgeted Context Pack
+# 4. Everything needed to change one feature, across layers, in one call
+npx cb-trainer slice "article comments" --budget 6000
+
+# 4b. Generate AI Agent Token-Budgeted Context Pack
 npx cb-trainer context "user login authentication" --max-tokens 1500
 
 # 5. Trace End-to-End Execution Sequence Flow (Mermaid Sequence)
