@@ -27,9 +27,14 @@ import { ModelValidator } from '../validator/modelValidator.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { CodebaseWatcher } from '../watcher/fileWatcher.js';
+import { TreeSitter } from '../parsing/treeSitter.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+
+// Load the tree-sitter grammars once; every command (including the MCP server) then parses synchronously.
+// If loading fails the extractors fall back to regex parsing, so the CLI keeps working.
+await TreeSitter.init();
 
 const program = new Command();
 

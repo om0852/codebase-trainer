@@ -20,9 +20,10 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy built dist files and package manifests
+# Copy built dist files, package manifests and the tree-sitter grammars (without them parsing falls back to regex)
 COPY package*.json ./
 COPY --from=builder /app/dist ./dist
+COPY grammars/ ./grammars/
 
 # Install production dependencies only
 RUN npm ci --only=production

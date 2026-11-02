@@ -36,8 +36,8 @@ test('dense vectors: related text is more similar than unrelated text', () => {
 });
 
 test('search ranks code above docs and compacts snippets around the definition', async () => {
-  const codeLines = Array.from({ length: 20 }, (_, i) => `const filler${i} = ${i};`);
-  codeLines.push('export function revokeApiKey(keyId: string) {', '  return store.revoke(keyId);', '}');
+  // A short module whose only declaration is the answer; the doc mentions the words far more often
+  const codeLines = ["import { store } from './store';", '', 'export function revokeApiKey(keyId: string) {', '  return store.revoke(keyId);', '}'];
   await withFixture({
     'src/keys.ts': codeLines.join('\n'),
     'GUIDE.md': Array.from({ length: 10 }, () => 'Revoke an API key: revoke api key revokeApiKey revoke key.').join('\n')
@@ -51,16 +51,16 @@ test('search ranks code above docs and compacts snippets around the definition',
     assert.ok(docHit.score / KIND_SCORE_WEIGHT.doc > codeHit.score, 'Fixture doc should outscore code before weighting');
     assert.ok(hits.indexOf(codeHit) < hits.indexOf(docHit), 'Code should rank above docs after weighting');
 
-    // The 23-line chunk starting at L1 must be narrowed down to the window around the definition
-    const fullChunk = hits.find(h => h.filePath.endsWith('keys.ts') && h.startLine === 1);
-    assert.ok(fullChunk && fullChunk.snippet.split('\n').length > 12, 'Fixture should produce a chunk longer than the snippet window');
-    const compact = SemanticSearchEngine.compactResults(root, 'how to revoke an api key', [fullChunk], 12);
-    const fileLines = fs.readFileSync(path.join(root, 'src', 'keys.ts'), 'utf8').split('\n');
+    // A long (23-line) result must be narrowed to the window around the definition. Built directly so the check
+    // does not depend on how the chunker cut the file.
+    const longLines = [...Array.from({ length: 20 }, (_, i) => `const filler${i} = ${i};`), ...codeLines.slice(2)];
+    const longChunk = { ...codeHit, startLine: 1, endLine: longLines.length, snippet: longLines.join('\n'), matchedSymbol: undefined };
+    const compact = SemanticSearchEngine.compactResults(root, 'how to revoke an api key', [longChunk], 12);
     assert.strictEqual(compact[0].filePath, 'src/keys.ts', 'Paths should be repo-relative');
     assert.strictEqual(compact[0].snippet.split('\n').length, 12, 'Snippet should be narrowed to 12 lines');
     assert.ok(compact[0].startLine > 1, 'Window should move past the filler lines');
     assert.ok(compact[0].snippet.includes('export function revokeApiKey'), 'Snippet should keep the matched definition');
-    assert.strictEqual(compact[0].snippet.split('\n')[0], fileLines[compact[0].startLine - 1], 'startLine should point at the first snippet line');
+    assert.strictEqual(compact[0].snippet.split('\n')[0], longLines[compact[0].startLine - 1], 'startLine should point at the first snippet line');
   }, 'cb-trainer-search-');
 });
 

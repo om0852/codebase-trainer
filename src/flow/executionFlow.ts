@@ -233,7 +233,7 @@ export class ExecutionFlowTracer {
     selected.forEach(e => { onPath.add(e.from.filePath); onPath.add(e.to.filePath); });
     const seedSet = new Set(seeds);
     seeds.forEach(s => (outEdges.get(s) || []).forEach(e => {
-      if (seedSet.has(e.to.filePath)) selected.add(e);
+      if (seedSet.has(e.to.filePath) && e.to.filePath !== e.from.filePath) selected.add(e);
     }));
     Array.from(onPath).forEach(file => (outEdges.get(file) || []).forEach(e => {
       if (e.kind !== 'http') return;
@@ -242,6 +242,19 @@ export class ExecutionFlowTracer {
         .filter(next => next.kind !== 'reference' && (!e.to.symbol || next.from.symbol === e.to.symbol))
         .forEach(next => selected.add(next));
     }));
+
+    // Same-file calls made from functions already on the path (e.g. scanDirectory -> listSourceFiles),
+    // followed up to two hops so helper chains inside one file show up as steps
+    for (let hop = 0; hop < 2; hop++) {
+      const touched = new Set<string>();
+      selected.forEach(e => {
+        if (e.to.symbol) touched.add(`${e.to.filePath}#${e.to.symbol}`);
+        if (e.from.symbol) touched.add(`${e.from.filePath}#${e.from.symbol}`);
+      });
+      onPath.forEach(file => (outEdges.get(file) || []).forEach(e => {
+        if (e.to.filePath === e.from.filePath && e.from.symbol && touched.has(`${e.from.filePath}#${e.from.symbol}`)) selected.add(e);
+      }));
+    }
 
     return Array.from(selected);
   }
@@ -263,7 +276,8 @@ export class ExecutionFlowTracer {
       if (visiting.has(key)) return;
       visiting.add(key);
       (byFrom.get(file) || [])
-        .filter(e => !symbol || e.from.symbol === symbol)
+        // Calls from a nested handler (`onSubmit` inside `BillingForm`) belong to the outer function's steps
+        .filter(e => !symbol || e.from.symbol === symbol || e.from.within === symbol)
         .forEach(e => {
           if (emitted.has(e)) return;
           emitted.add(e);

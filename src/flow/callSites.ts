@@ -3,13 +3,16 @@ import * as path from 'path';
 import { ASTFact } from '../types/index.js';
 import { ImportResolver } from '../graph/importResolver.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
+import { CodeFacts, extractCodeFacts } from '../parsing/codeFacts.js';
 
 export type FlowEdgeKind = 'call' | 'reference' | 'http';
 
 export interface FlowEdge {
   kind: FlowEdgeKind;
   // Repo-relative POSIX paths
-  from: { filePath: string; symbol?: string; line: number };
+  // `within`: the outermost named function containing the call when it differs from `symbol`
+  // (e.g. a component whose nested `onSubmit` handler makes the call)
+  from: { filePath: string; symbol?: string; within?: string; line: number };
   to: { filePath: string; symbol?: string; line?: number };
   // The source line the edge was read from
   evidence: string;
@@ -59,8 +62,15 @@ export class CallSiteExtractor {
       const lines = content.split(/\r?\n/);
       const isPython = fact.language === 'python';
       const allowJsx = /\.(jsx|tsx)$/i.test(fact.filePath);
-      const { bindings, importLines } = isPython ? this.parsePythonImports(content) : this.parseJsImports(content);
 
+      const tree = extractCodeFacts(fact.filePath, content);
+      if (tree) {
+        edges.push(...this.treeEdges(fact, tree, lines, resolver, read, toRel));
+        return;
+      }
+
+      // Regex fallback when tree-sitter is not initialised
+      const { bindings, importLines } = isPython ? this.parsePythonImports(content) : this.parseJsImports(content);
       const fileEdges = new Map<string, FlowEdge>();
       bindings.forEach(binding => {
         const target = resolver.resolve(fact.filePath, binding.specifier, fact.language);
@@ -96,6 +106,108 @@ export class CallSiteExtractor {
   }
 
   /**
+   * The function making the call on `lineNo` (and its outermost named container), from the syntax tree when
+   * available, otherwise from the regex heuristics.
+   */
+  private static callerAt(
+    absPath: string,
+    lines: string[],
+    lineNo: number,
+    isPython: boolean,
+    read: (absPath: string) => string
+  ): { symbol?: string; within?: string } {
+    const facts = extractCodeFacts(absPath, read(absPath));
+    const call = facts?.calls.find(c => c.line === lineNo && /fetch|axios|\.(get|post|put|patch|delete)$/i.test(c.callee))
+      ?? facts?.calls.find(c => c.line === lineNo);
+    if (call) {
+      const symbol = call.enclosing ?? this.registeredCallback(lines, lineNo - 1);
+      return call.outermost && call.outermost !== symbol ? { symbol, within: call.outermost } : { symbol };
+    }
+    return { symbol: this.enclosingSymbol(lines, lineNo - 1, isPython) };
+  }
+
+  /**
+   * Edges from syntax-tree facts: calls and value uses of imported bindings, plus calls between functions in
+   * the same file (`helper()`, `this.method()`, `self.method()`).
+   */
+  private static treeEdges(
+    fact: ASTFact,
+    tree: CodeFacts,
+    lines: string[],
+    resolver: ImportResolver,
+    read: (absPath: string) => string,
+    toRel: (absPath: string) => string
+  ): FlowEdge[] {
+    const fileEdges = new Map<string, FlowEdge>();
+    const fromRel = toRel(fact.filePath);
+    const fromOf = (enclosing: string | undefined, lineNo: number) => enclosing ?? this.registeredCallback(lines, lineNo - 1);
+    const add = (kind: 'call' | 'reference', lineNo: number, enclosing: string | undefined, toFile: string, toSymbol: string, toLine: number | undefined, outermost?: string) => {
+      const fromSymbol = fromOf(enclosing, lineNo);
+      const key = `${kind}|${toFile}|${toSymbol}|${fromSymbol || ''}`;
+      if (fileEdges.has(key)) return;
+      const within = outermost && outermost !== fromSymbol ? outermost : undefined;
+      fileEdges.set(key, {
+        kind,
+        from: { filePath: fromRel, symbol: fromSymbol, ...(within && { within }), line: lineNo },
+        to: { filePath: toFile, symbol: toSymbol, line: toLine },
+        evidence: (lines[lineNo - 1] || '').trim()
+      });
+    };
+
+    // Imported bindings -> call and value-reference edges into the resolved file
+    tree.imports.forEach(imp => {
+      if (imp.kind === 're-export' || imp.kind === 'dynamic') return;
+      const target = resolver.resolve(fact.filePath, imp.specifier, fact.language);
+      if (!target || target === fact.filePath) return;
+      const targetRel = toRel(target);
+      const targetContent = read(target);
+      const targetFacts = extractCodeFacts(target, targetContent);
+      const definitionLine = (symbol: string) =>
+        targetFacts?.symbols.find(s => s.qualifiedName === symbol || s.name === symbol)?.startLine
+        ?? this.findDefinitionLine(targetContent, symbol);
+
+      imp.bindings.filter(b => !b.typeOnly).forEach(binding => {
+        const base = binding.imported === '*' || binding.imported === 'default' ? binding.local : binding.imported;
+        tree.calls.forEach(call => {
+          let symbol: string | null = null;
+          if (call.callee === binding.local) {
+            symbol = base;
+          } else if (call.callee.startsWith(binding.local + '.')) {
+            const member = call.callee.slice(binding.local.length + 1).split('.')[0];
+            symbol = binding.imported === '*' ? member : `${base}.${member}`;
+          }
+          if (symbol) add('call', call.line, call.enclosing, targetRel, symbol, definitionLine(symbol), call.outermost);
+        });
+        tree.valueRefs.filter(ref => ref.name === binding.local).forEach(ref => {
+          add('reference', ref.line, ref.enclosing, targetRel, base, definitionLine(base));
+        });
+      });
+    });
+
+    // Same-file calls between named functions and methods
+    const local = new Map<string, number>();
+    // Local helpers declared inside another function are implementation detail, not flow steps
+    tree.symbols.filter(s => (s.kind === 'function' || s.kind === 'method') && !s.nestedInFunction).forEach(s => local.set(s.qualifiedName, s.startLine));
+    tree.calls.forEach(call => {
+      if (!call.enclosing) return;
+      let target: string | null = null;
+      const selfCall = call.callee.match(/^(?:this|self)\.([\w$]+)$/);
+      if (selfCall && call.enclosing.includes('.')) {
+        target = `${call.enclosing.split('.')[0]}.${selfCall[1]}`;
+      } else if (/^[\w$]+$/.test(call.callee)) {
+        target = call.callee;
+      }
+      if (target && target !== call.enclosing && local.has(target)) {
+        add('call', call.line, call.enclosing, fromRel, target, local.get(target), call.outermost);
+      }
+    });
+
+    // A reference edge adds nothing when the same function already calls the target
+    const called = new Set(Array.from(fileEdges.values()).filter(e => e.kind === 'call').map(e => `${e.to.filePath}|${e.from.symbol || ''}`));
+    return Array.from(fileEdges.values()).filter(e => !(e.kind === 'reference' && called.has(`${e.to.filePath}|${e.from.symbol || ''}`)));
+  }
+
+  /**
    * Links client fetch/axios calls to server route handlers with the same method and normalized path.
    */
   public static extractHttpEdges(repoPath: string, read: (absPath: string) => string = f => fs.readFileSync(f, 'utf8')): FlowEdge[] {
@@ -122,7 +234,7 @@ export class CallSiteExtractor {
           kind: 'http',
           from: {
             filePath: call.filePath.replace(/\\/g, '/'),
-            symbol: this.enclosingSymbol(clientLines, call.line - 1, clientPython),
+            ...this.callerAt(path.join(repoPath, call.filePath), clientLines, call.line, clientPython, read),
             line: call.line
           },
           to: { filePath: ep.filePath.replace(/\\/g, '/'), symbol: handlerSymbol, line: ep.line },

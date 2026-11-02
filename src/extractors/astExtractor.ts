@@ -3,6 +3,7 @@ import * as path from 'path';
 import { ASTFact } from '../types/index.js';
 import { CodebaseIgnore } from './codebaseIgnore.js';
 import { GitIgnoreRules } from './gitignore.js';
+import { extractCodeFacts } from '../parsing/codeFacts.js';
 
 // Build output, dependency and cache directories that are never indexed, even without a .gitignore
 const IGNORED_DIRS = [
@@ -217,6 +218,11 @@ export class ASTExtractor {
       }
     }
 
+    // When tree-sitter is initialised, its symbols and imports replace the regex ones for supported languages
+    const tree = extractCodeFacts(filePath, content);
+    const treeSymbols = tree?.symbols.map(s => s.name);
+    const treeFunctions = tree?.symbols.filter(s => s.kind === 'function' || s.kind === 'method').length;
+
     return {
       filePath,
       language,
@@ -226,10 +232,10 @@ export class ASTExtractor {
       exportCounts: { named: namedExports, default: defaultExports },
       hasTypeAnnotations,
       typeCastingCount,
-      importedModules: Array.from(new Set(importedModules)),
-      funcCount,
-      avgFuncLength,
-      symbols: Array.from(symbols)
+      importedModules: Array.from(new Set(tree ? tree.imports.map(i => i.specifier) : importedModules)),
+      funcCount: treeFunctions ?? funcCount,
+      avgFuncLength: treeFunctions ? Math.round(lines.length / treeFunctions) : avgFuncLength,
+      symbols: Array.from(new Set(treeSymbols ?? symbols))
     };
   }
 

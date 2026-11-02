@@ -5,6 +5,7 @@ import { execFileSync } from 'child_process';
 import { SemanticSearchEngine } from '../src/semantic/searchEngine.js';
 import { TextNormalizer } from '../src/semantic/textNormalizer.js';
 import { ASTExtractor } from '../src/extractors/astExtractor.js';
+import { TreeSitter } from '../src/parsing/treeSitter.js';
 import { BENCH_DIR, CorpusRepo, ensureRepo, loadCorpus } from './corpus.js';
 
 /**
@@ -259,7 +260,9 @@ function compare(current: BenchReport, baselinePath: string): string[] {
   });
 }
 
-function main() {
+async function main() {
+  const parser = (await TreeSitter.init()) ? 'tree-sitter' : 'regex';
+  console.error(`Parser: ${parser}`);
   const split = args.split || 'all';
   const only = args.repos ? new Set(args.repos.split(',')) : null;
   const label = args.label || JSON.parse(fs.readFileSync(path.join(BENCH_DIR, '..', 'package.json'), 'utf8')).version;
@@ -308,4 +311,4 @@ function main() {
   }
 }
 
-main();
+await main();

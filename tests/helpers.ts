@@ -2,6 +2,11 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { TreeSitter } from '../src/parsing/treeSitter.js';
+
+// Every test file imports this module, so the whole suite runs with tree-sitter parsing (as the CLI does).
+// Set CODEBASE_TRAINER_PARSER=regex to run it against the regex fallback instead.
+await TreeSitter.init();
 
 /** The repository under test (the suite is run from the repo root). */
 export const repoPath = process.cwd();

@@ -97,6 +97,8 @@ If the target repo has `typescript` installed, use the compiler API (`ts.createP
 
 **Done when:** benchmark recall@5 improves on all repos; flow traces include same-file calls; all existing tests pass through the new extractor.
 
+**Status (core done):** `web-tree-sitter` 0.27 with committed TypeScript, TSX, JavaScript and Python grammars (`grammars/`, ~3.7 MB), initialised once at startup with a regex fallback (`CODEBASE_TRAINER_PARSER=regex` forces it). Symbols, imports, signatures, decorators, call sites and nesting come from the syntax tree; flow edges grew from 274 to 460 on this repo, including same-file calls, JSX renders and handlers nested in components, and traces now read in execution order. Syntax-aligned chunking left ranking flat (MRR 0.69 → 0.69, hit@5 83% → 84%) but made the index 20–25% smaller and search faster (t3-turbo p95 150 → 45 ms). The "recall improves on all repos" criterion was **not** met: ranking, not parsing, is the limit, which Phases 3–4 address. Not yet done: the diff checker's signature-change check, the optional TypeScript-compiler precision mode, and Go/Java grammars.
+
 ---
 
 ## 5. Phase 2 — Storage and a long-running server (weeks 4–6)
