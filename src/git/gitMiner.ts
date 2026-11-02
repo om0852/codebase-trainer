@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -60,7 +60,8 @@ export class GitMiner {
         .filter(Boolean);
 
       const branchNames = Array.from(new Set(
-        execSync('git for-each-ref --format=%(refname:short) refs/heads refs/remotes', { cwd: repoPath, encoding: 'utf8' })
+        // Arguments passed directly: `%(...)` would be parsed by the shell
+        execFileSync('git', ['for-each-ref', '--format=%(refname:short)', 'refs/heads', 'refs/remotes'], { cwd: repoPath, encoding: 'utf8' })
           .split(/\r?\n/)
           .map(b => b.trim().replace(/^(?:origin|upstream)\//, ''))
           .filter(b => b && b !== 'HEAD' && !b.endsWith('/HEAD') && b !== 'origin')

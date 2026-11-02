@@ -26,13 +26,20 @@ export class RepoWatch {
     if (this.states.has(root)) return true;
     try {
       const state: WatchState = { watcher: null as unknown as fs.FSWatcher, dirty: 'all' };
-      state.watcher = fs.watch(root, { recursive: true, persistent: false }, (_event, filename) => {
+      // Watch the real path: macOS reports events against it (temp folders live under /var -> /private/var), and
+      // file names relative to a symlinked path would not match the repo's files
+      state.watcher = fs.watch(fs.realpathSync(root), { recursive: true, persistent: false }, (_event, filename) => {
         if (state.dirty === 'all') return;
         if (!filename) {
           state.dirty = 'all';
           return;
         }
         const rel = filename.toString().replace(/\\/g, '/');
+        // A name that does not point inside the repo cannot be patched safely: walk everything next time
+        if (rel.startsWith('../') || rel === '..' || path.isAbsolute(rel)) {
+          state.dirty = 'all';
+          return;
+        }
         if (IGNORED_PREFIXES.some(p => rel === p.slice(0, -1) || rel.startsWith(p))) return;
         state.dirty.add(rel);
         // A burst of changes (branch switch, npm install, codegen) is cheaper as one walk

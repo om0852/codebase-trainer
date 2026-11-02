@@ -79,8 +79,9 @@ test('watched repo: the patched file listing follows additions, edits and deleti
       writeFile(root, 'src/new.ts', 'export const added = 1;\n');
       writeFile(root, 'src/keys.ts', 'export const changed = 22;\n');
       fs.rmSync(path.join(root, 'src', 'nested'), { recursive: true });
-      // Watch events arrive asynchronously
-      for (let i = 0; i < 40 && listed().includes('src/nested/deep.ts'); i++) await sleep(50);
+      // Watch events arrive asynchronously (macOS batches them, up to a second or more)
+      const settled = () => { const l = listed(); return l.includes('src/new.ts') && !l.includes('src/nested/deep.ts'); };
+      for (let i = 0; i < 100 && !settled(); i++) await sleep(50);
       assert.deepEqual(listed(), ['src/billing.ts', 'src/keys.ts', 'src/new.ts']);
       const keys = ASTExtractor.listSourceFiles(root).find(e => e.filePath.endsWith('keys.ts'))!;
       assert.equal(keys.size, fs.statSync(path.join(root, 'src', 'keys.ts')).size, 'edited file has fresh stats');
