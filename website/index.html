@@ -3,1526 +3,293 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Codebase Trainer v1.3.0 — High-Performance Local Codebase Intelligence & NLP Model</title>
-  <meta name="description" content="Supercharge Cursor, Claude Code, Antigravity, and VS Code with local AST skeletonization, API contract drift detection, PageRank centrality, hybrid dense vectors, and zero-token call graph execution flows. 99.98% token savings." />
-  
-  <!-- Developer Fonts: Geist, Inter, JetBrains Mono -->
+  <title>Codebase Trainer — the whole feature, in one call</title>
+  <meta name="description" content="A local MCP server that gives Claude Code, Cursor and VS Code agents the UI, API, data model, auth checks and tests behind any feature, in one call, inside a token budget, fully offline." />
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-  
-  <link rel="stylesheet" href="/src/style.css" />
-</head>
-<body>
-  <!-- Preloader Screen -->
-  <div class="preloader" id="preloader">
-    <div class="preloader-content">
-      <div class="preloader-logo">
-        <span class="logo-symbol">⚡</span>
-        <span class="logo-title">CODEBASE TRAINER</span>
-      </div>
-      <div class="preloader-subtitle">STARK CODEBASE INTELLIGENCE ENGINE • v1.3.0</div>
-      <div class="progress-container">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-      <div class="progress-number" id="progressNumber">0%</div>
-    </div>
-  </div>
 
-  <!-- Header / Navigation -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cpath d='M21 11.5a7 7 0 1 0 0 9' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="/src/site.css" />
+</head>
+<body class="landing">
+  <div class="scroll-progress" id="scrollProgress"></div>
+
   <header class="navbar" id="navbar">
     <div class="nav-wrapper">
       <a href="#top" class="brand-logo">
         <span class="brand-mark">CODEBASE</span>
-        <span class="brand-sub">TRAINER v1.3.0</span>
+        <span class="brand-sub">TRAINER v2.0.0</span>
       </a>
-
-      <nav class="nav-menu">
-        <a href="#about" class="nav-item">ARCHITECTURE</a>
-        <a href="#benchmark" class="nav-item">BENCHMARK</a>
-        <a href="#tools" class="nav-item">MCP SUITE</a>
-        <a href="#flow" class="nav-item">SEQUENCE FLOW</a>
-        <a href="#docs" class="nav-item">DOCUMENTATION</a>
-        <a href="#setup" class="nav-item">CONFIGURATIONS</a>
+      <nav class="nav-menu" id="navMenu">
+        <a href="#how" class="nav-item">HOW IT WORKS</a>
+        <a href="#features" class="nav-item">FEATURES</a>
+        <a href="#proof" class="nav-item">RESULTS</a>
+        <a href="docs.html" class="nav-item">DOCS</a>
       </nav>
-
       <div class="nav-actions">
-        <a href="https://github.com/om0852/codebase-trainer" target="_blank" class="btn-outline">
-          GITHUB
-        </a>
-        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank" class="btn-white">
-          NPM v1.3.0
-        </a>
+        <a href="https://github.com/om0852/codebase-trainer" target="_blank" rel="noopener" class="btn-outline">GITHUB</a>
+        <a href="docs.html#quickstart" class="btn-white">GET STARTED</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">MENU</button>
       </div>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero-section" id="top">
-    <div class="hero-ambient-glow"></div>
+  <!-- Hero: three parallax layers (grid, glow, file chips) behind the headline -->
+  <section class="hero" id="top">
+    <div class="hero-layer hero-grid" data-parallax="0.15"></div>
+    <div class="hero-layer hero-glow" data-parallax="0.3"></div>
+    <div class="hero-layer hero-chips" data-parallax="0.45" aria-hidden="true">
+      <span class="chip" style="--x: 8%;  --y: 22%; --d: 0.0s" data-depth="18">app/keys/page.tsx</span>
+      <span class="chip" style="--x: 74%; --y: 16%; --d: 0.6s" data-depth="28">lib/api.ts</span>
+      <span class="chip chip-cyan" style="--x: 82%; --y: 58%; --d: 1.2s" data-depth="36">DELETE /api/keys/[id]</span>
+      <span class="chip" style="--x: 4%;  --y: 66%; --d: 1.8s" data-depth="24">schema.prisma · ApiKey</span>
+      <span class="chip chip-green" style="--x: 64%; --y: 82%; --d: 2.4s" data-depth="14">keys.test.ts ✓</span>
+      <span class="chip" style="--x: 22%; --y: 86%; --d: 3.0s" data-depth="32">requireScope('keys:delete')</span>
+    </div>
 
-    <div class="hero-container container">
-      <div class="hero-content">
-        <div class="pill-badge">
-          <span class="pill-dot"></span>
-          <span>v1.3.0 • AST SKELETONIZER • CONTRACT DRIFT • HYBRID DENSE VECTORS • MCP RESOURCES</span>
-        </div>
-        <h1 class="hero-main-title">
-          Stop Grepping. <br />
-          <span class="white-text">Train Your Codebase For AI IDEs.</span>
-        </h1>
-        <p class="hero-tagline">
-          Supercharging Cursor, Claude Code, Antigravity, and VS Code with local AST facts, token-budgeted AST skeletonization, cross-service API contract drift detection, and dynamic call graphs. Reduce AI prompt tokens by <strong>99.98%</strong> with <strong>26x faster</strong> context retrieval and <strong>zero cloud data leakage</strong>.
-        </p>
-
+    <div class="hero-inner container">
+      <div class="pill-badge reveal" data-reveal>
+        <span class="pill-dot"></span>
+        <span>v2.0 · OPEN SOURCE · 100% OFFLINE</span>
+      </div>
+      <h1 class="hero-title reveal" data-reveal style="--i: 1">
+        Stop grepping.<br />
+        <span class="white-text">Give your agent the whole feature.</span>
+      </h1>
+      <p class="hero-sub reveal" data-reveal style="--i: 2">
+        One MCP call hands Claude Code, Cursor or VS Code the page, API, route, data model, auth checks and tests behind any feature.
+      </p>
+      <div class="hero-cta reveal" data-reveal style="--i: 3">
         <div class="command-widget">
           <div class="command-input">
             <span class="command-prefix">$</span>
-            <span class="command-text" id="cmdText">npx codebase-trainer init</span>
+            <span class="command-text">npx codebase-trainer setup</span>
           </div>
-          <button class="btn-white" id="copyCmdBtn">
-            <span>COPY</span>
-          </button>
+          <button class="btn-white" data-copy="npx codebase-trainer setup"><span>COPY</span></button>
         </div>
-
-        <div class="hero-stats-row">
-          <div class="hero-stat-item">
-            <span class="hero-stat-number text-cyan">99.98%</span>
-            <span class="hero-stat-label">Prompt Token Savings</span>
-          </div>
-          <div class="hero-stat-item">
-            <span class="hero-stat-number text-green">52%–85%</span>
-            <span class="hero-stat-label">AST Token Compression</span>
-          </div>
-          <div class="hero-stat-item">
-            <span class="hero-stat-number">~52 ms</span>
-            <span class="hero-stat-label">Hybrid Search Latency</span>
-          </div>
-          <div class="hero-stat-item">
-            <span class="hero-stat-number text-cyan">5 Live</span>
-            <span class="hero-stat-label">MCP URI Resources</span>
-          </div>
-          <div class="hero-stat-item">
-            <span class="hero-stat-number text-green">100%</span>
-            <span class="hero-stat-label">Zero-Cloud Privacy</span>
-          </div>
-        </div>
+        <a href="docs.html" class="btn-outline btn-lg">READ THE DOCS →</a>
       </div>
+    </div>
 
-      <!-- Floating 3D Map / Graph Action Trigger -->
-      <a href="#tools" class="floating-3d-button">
-        <div class="f-button-badge">v1.3.0 MCP</div>
-        <div class="f-button-title">EXPLORE<br />14 TOOLS & RESOURCES</div>
-        <div class="f-button-icon">→</div>
-      </a>
+    <a href="#stats" class="scroll-cue" aria-label="Scroll down"><span></span></a>
+  </section>
+
+  <!-- Counters -->
+  <section class="stats-band" id="stats">
+    <div class="container stats-grid">
+      <div class="stat reveal" data-reveal>
+        <span class="stat-num" data-count="84" data-suffix="%">0%</span>
+        <span class="stat-label">right file in the top 5</span>
+      </div>
+      <div class="stat reveal" data-reveal style="--i: 1">
+        <span class="stat-num" data-count="3.7" data-decimals="1" data-suffix="×">0×</span>
+        <span class="stat-label">fewer tokens than grep</span>
+      </div>
+      <div class="stat reveal" data-reveal style="--i: 2">
+        <span class="stat-num" data-count="83" data-suffix="%">0%</span>
+        <span class="stat-label">of a feature in one call</span>
+      </div>
+      <div class="stat reveal" data-reveal style="--i: 3">
+        <span class="stat-num" data-count="50" data-suffix=" ms">0 ms</span>
+        <span class="stat-label">search on 10,000 files</span>
+      </div>
     </div>
   </section>
 
-  <!-- Section 1: Architecture Split Cards -->
-  <section class="section-about" id="about">
+  <!-- One call, every layer: the request on the left, the response building on the right -->
+  <section class="flow-scene" id="how">
     <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">HIGH-PERFORMANCE ARCHITECTURE • v1.3.0</span>
-        <h2 class="section-title">Zero-Cloud Local Intelligence Engine</h2>
-        <p class="section-desc">Engineered specifically for developer tools, AI agent loops, and private enterprise monorepos.</p>
+      <div class="scene-head reveal" data-reveal>
+        <span class="section-tag">HOW IT WORKS</span>
+        <h2 class="section-title">One call. Every layer.</h2>
+        <p class="scene-sub">Your agent asks once. It gets back every file the change touches, in order, with proof.</p>
       </div>
 
-      <div class="split-grid">
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-1"></div>
+      <div class="slice-demo" data-reveal>
+        <div class="slice-request">
+          <div class="slice-step">
+            <span class="slice-kicker">01 · YOU ASK</span>
+            <p class="slice-ask">“Change how API keys are revoked.”</p>
           </div>
-          <div class="card-caption">
-            <span class="caption-num">01</span>
-            <h4>Hybrid RRF & Local Dense Vectors</h4>
-            <p>128-dimensional local subword dense embeddings combined with Okapi BM25 and PageRank via Reciprocal Rank Fusion (RRF) for sub-52ms semantic recall.</p>
+          <div class="slice-step">
+            <span class="slice-kicker">02 · AGENT CALLS</span>
+            <code class="slice-call"><span>feature_slice</span>({ feature: "api key revocation" })</code>
           </div>
-        </div>
-
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-2"></div>
-          </div>
-          <div class="card-caption">
-            <span class="caption-num">02</span>
-            <h4>Token-Budgeted AST Skeletonizer</h4>
-            <p>Compresses large source files by 52%–85% by stripping function bodies (/* ... */) while preserving 100% of interfaces, types, signatures, and JSDocs.</p>
+          <div class="slice-step">
+            <span class="slice-kicker">03 · GETS BACK</span>
+            <div class="slice-meta">
+              <div><strong data-count="6">0</strong><span>layers</span></div>
+              <div><strong data-count="14">0</strong><span>files</span></div>
+              <div><strong data-count="88" data-suffix=" ms">0 ms</strong><span>warm</span></div>
+            </div>
           </div>
         </div>
 
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-3"></div>
-          </div>
-          <div class="card-caption">
-            <span class="caption-num">03</span>
-            <h4>Cross-Service API Contract Drift</h4>
-            <p>Scans client-side API fetches against backend route handlers to catch 404 dead routes, HTTP method mismatches, and schema payload drift across microservices.</p>
-          </div>
-        </div>
+        <div class="slice-wire" aria-hidden="true"><span></span></div>
 
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-4"></div>
+        <div class="slice-response">
+          <div class="slice-response-bar">
+            <span>RESPONSE</span>
+            <span class="slice-budget">4,820 / 6,000 tokens</span>
           </div>
-          <div class="card-caption">
-            <span class="caption-num">04</span>
-            <h4>Power-Iteration PageRank Graph</h4>
-            <p>Pure TypeScript PageRank algorithm (d=0.85, ε=10⁻⁵) traversing import dependencies and call hierarchies to automatically surface architectural hub files.</p>
-          </div>
-        </div>
-
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-5"></div>
-          </div>
-          <div class="card-caption">
-            <span class="caption-num">05</span>
-            <h4>Dynamic Execution Flow Diagrams</h4>
-            <p>Traces multi-module function callers and callees to render dynamic Mermaid sequence diagrams on the fly without hardcoded sequence lines.</p>
-          </div>
-        </div>
-
-        <div class="split-card">
-          <div class="card-image-wrap">
-            <div class="card-img-placeholder img-6"></div>
-          </div>
-          <div class="card-caption">
-            <span class="caption-num">06</span>
-            <h4>100% Zero-Cloud Local Privacy</h4>
-            <p>Runs entirely inside your local Node.js runtime. Zero code leaves your machine, zero third-party subscription fees, and zero API key requirements.</p>
-          </div>
+          <ol class="slice-rows">
+            <li style="--i: 0"><span class="row-layer">UI</span><code>app/settings/keys/page.tsx<em>:24</em></code><span class="row-why">calls revokeKey</span></li>
+            <li style="--i: 1"><span class="row-layer">CLIENT</span><code>lib/api/keys.ts<em>:41</em></code><span class="row-why">DELETE /api/keys/:id</span></li>
+            <li style="--i: 2"><span class="row-layer">ROUTE</span><code>app/api/keys/[id]/route.ts<em>:12</em></code><span class="row-why">handles the request</span></li>
+            <li style="--i: 3"><span class="row-layer">AUTH</span><code>lib/auth/scopes.ts<em>:8</em></code><span class="row-why">requireScope('keys:delete')</span></li>
+            <li style="--i: 4"><span class="row-layer">DATA</span><code>prisma/schema.prisma<em>:57</em></code><span class="row-why">model ApiKey</span></li>
+            <li style="--i: 5"><span class="row-layer">TESTS</span><code>tests/keys.test.ts</code><span class="row-why">npx vitest run</span></li>
+          </ol>
+          <div class="slice-scan" aria-hidden="true"></div>
         </div>
       </div>
+      <p class="scene-note reveal" data-reveal>Illustrative example. Links come from real call sites, requests and ORM calls, each with <code>file:line</code>.</p>
     </div>
   </section>
 
-  <!-- Section 2: Performance Benchmark -->
-  <section class="section-benchmark" id="benchmark">
+  <!-- Features: short cards with tilt -->
+  <section class="feature-scene" id="features">
     <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">EMPIRICAL BENCHMARK • v1.3.0</span>
-        <h2 class="section-title">100 Real-World Query Test Results</h2>
-        <p class="section-desc">Comparing raw file grepping vs. pre-indexed AST skeletonization & Hybrid RRF local model retrieval.</p>
+      <div class="scene-head reveal" data-reveal>
+        <span class="section-tag">EIGHT TOOLS</span>
+        <h2 class="section-title">Built for the moments agents get lost</h2>
       </div>
-
-      <div class="benchmark-grid">
-        <!-- Without Model -->
-        <div class="bench-card naive-bench">
-          <div class="bench-head">
-            <span class="bench-tag tag-raw">RAW FILE GREP</span>
-            <h3>Without Model Index</h3>
-          </div>
-          <div class="bench-metrics">
-            <div class="m-item">
-              <span class="m-label">Total Prompt Tokens:</span>
-              <span class="m-val val-bad">453,930,500</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Avg Tokens / Query:</span>
-              <span class="m-val val-bad">4,539,305</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Raw Matches Noise:</span>
-              <span class="m-val val-bad">43,996</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">AST Skeletonizer:</span>
-              <span class="m-val val-bad">None (Raw Code Dump)</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Contract Drift Detection:</span>
-              <span class="m-val val-bad">Manual (404s in Prod)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Metric Divider / Accent Pulse -->
-        <div class="bench-center-pulse">
-          <div class="pulse-val white-text">99.98%</div>
-          <div class="pulse-sub">TOKEN SAVINGS</div>
-          <div class="pulse-speed text-cyan">26x FASTER</div>
-        </div>
-
-        <!-- With Model -->
-        <div class="bench-card model-bench white-glow">
-          <div class="bench-head">
-            <span class="bench-tag tag-model">CODEBASE-TRAINER v1.3.0</span>
-            <h3>With Model Index</h3>
-          </div>
-          <div class="bench-metrics">
-            <div class="m-item">
-              <span class="m-label">Total Prompt Tokens:</span>
-              <span class="m-val val-good">86,080</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Avg Tokens / Query:</span>
-              <span class="m-val val-good">861 (~5,200x less)</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">AST Skeleton Compression:</span>
-              <span class="m-val val-good">52%–85% Reduction</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Local Hybrid Latency:</span>
-              <span class="m-val val-good">~52 ms / query</span>
-            </div>
-            <div class="m-item">
-              <span class="m-label">Cross-Service Drift Scan:</span>
-              <span class="m-val val-good">~18 ms / 32 routes</span>
-            </div>
-          </div>
-        </div>
+      <div class="feature-grid">
+        <article class="feature tilt reveal" data-reveal style="--i: 0">
+          <code class="feature-tool">feature_slice</code>
+          <h3>The whole feature</h3>
+          <p>Every file a change touches, by layer, with why.</p>
+        </article>
+        <article class="feature tilt reveal" data-reveal style="--i: 1">
+          <code class="feature-tool">trace_flow</code>
+          <h3>How it runs</h3>
+          <p>Entry point to database, with evidence.</p>
+        </article>
+        <article class="feature tilt reveal" data-reveal style="--i: 2">
+          <code class="feature-tool">impact</code>
+          <h3>What breaks</h3>
+          <p>Dependents and the exact tests to run.</p>
+        </article>
+        <article class="feature tilt reveal" data-reveal style="--i: 3">
+          <code class="feature-tool">review_diff</code>
+          <h3>Check before commit</h3>
+          <p>Secrets, broken imports, drift. SARIF ready.</p>
+        </article>
+        <article class="feature tilt reveal" data-reveal style="--i: 4">
+          <code class="feature-tool">api_map</code>
+          <h3>Who can call it</h3>
+          <p>Auth, scopes and roles for every route.</p>
+        </article>
+        <article class="feature tilt reveal" data-reveal style="--i: 5">
+          <code class="feature-tool">search</code>
+          <h3>Code first</h3>
+          <p>Ranked snippets. Optional local neural model.</p>
+        </article>
       </div>
-
-      <!-- Competitor Comparison Table Section -->
-      <div class="comp-wrapper">
-        <div class="comp-header-banner">
-          <div>
-            <div class="comp-banner-title">⚡ Empirical Head-to-Head Comparison: Codebase-Trainer vs. Repomix</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
-              Audited against production full-stack monorepo: <strong>new-creatosaurus</strong> (2,366+ source files across 7 microservices &amp; React frontend)
-            </div>
-          </div>
-          <div class="comp-banner-meta">
-            BENCHMARKED WITH REPOMIX v1.18.1 &amp; CB-TRAINER v1.3.0
-          </div>
-        </div>
-
-        <!-- Visual HUD KPI Cards Grid with Comparison Meters -->
-        <div class="comp-hud-grid">
-          <!-- KPI 1 -->
-          <div class="comp-hud-card hud-champion">
-            <div class="comp-hud-label">
-              <span>Task Context Tokens</span>
-              <span class="comp-hud-badge badge-champion">99.98% LESS</span>
-            </div>
-            <div class="comp-hud-val text-cyan">1,478</div>
-            <div class="comp-hud-sub">vs. 4,550,068 tokens (Repomix)</div>
-            <div class="meter-group">
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span>Repomix Raw</span>
-                  <span class="val-bad">4.55M</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-bad" style="width: 100%;"></div>
-                </div>
-              </div>
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span>Repomix Comp</span>
-                  <span class="val-warn">1.71M</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-warn" style="width: 37.5%;"></div>
-                </div>
-              </div>
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span style="color: var(--accent-cyan); font-weight: bold;">CB-Trainer</span>
-                  <span style="color: var(--accent-cyan); font-weight: bold;">1.48k</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-good" style="width: 2%;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- KPI 2 -->
-          <div class="comp-hud-card hud-champion">
-            <div class="comp-hud-label">
-              <span>50-Turn Agent Cost</span>
-              <span class="comp-hud-badge badge-pass">99.9% CHEAPER</span>
-            </div>
-            <div class="comp-hud-val text-green">$0.09</div>
-            <div class="comp-hud-sub">vs. $213.41 / session (Repomix)</div>
-            <div class="meter-group">
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span>Repomix Comp</span>
-                  <span class="val-bad">$213.41</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-bad" style="width: 100%;"></div>
-                </div>
-              </div>
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span style="color: var(--accent-green); font-weight: bold;">CB-Trainer</span>
-                  <span style="color: var(--accent-green); font-weight: bold;">$0.09</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-good" style="width: 1.5%;"></div>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top: 0.65rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-green);">
-              ⚡ Saves $213.23 / dev / day
-            </div>
-          </div>
-
-          <!-- KPI 3 -->
-          <div class="comp-hud-card hud-champion">
-            <div class="comp-hud-label">
-              <span>Time-to-First-Token</span>
-              <span class="comp-hud-badge badge-champion">26x FASTER</span>
-            </div>
-            <div class="comp-hud-val white-text">&lt; 1.5s</div>
-            <div class="comp-hud-sub">vs. 25–35s TTFT queue (Repomix)</div>
-            <div class="meter-group">
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span>Repomix</span>
-                  <span class="val-bad">32.4s</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-bad" style="width: 95%;"></div>
-                </div>
-              </div>
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span style="color: #ffffff; font-weight: bold;">CB-Trainer</span>
-                  <span style="color: #ffffff; font-weight: bold;">1.2s</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-good" style="width: 5%;"></div>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top: 0.65rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim);">
-              Zero prompt cache misses
-            </div>
-          </div>
-
-          <!-- KPI 4 -->
-          <div class="comp-hud-card hud-champion">
-            <div class="comp-hud-label">
-              <span>Context Headroom</span>
-              <span class="comp-hud-badge badge-pass">100% FEASIBLE</span>
-            </div>
-            <div class="comp-hud-val" style="color: #a78bfa;">99.3%</div>
-            <div class="comp-hud-sub">Free context window on Claude 3.5</div>
-            <div class="meter-group">
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span>Repomix</span>
-                  <span class="val-bad">OVERFLOW (0%)</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-bad" style="width: 100%;"></div>
-                </div>
-              </div>
-              <div class="meter-row">
-                <div class="meter-header">
-                  <span style="color: #a78bfa; font-weight: bold;">CB-Trainer</span>
-                  <span style="color: #a78bfa; font-weight: bold;">99.3% Free</span>
-                </div>
-                <div class="meter-track">
-                  <div class="meter-bar bar-good" style="width: 99.3%;"></div>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top: 0.65rem; font-family: var(--font-mono); font-size: 0.7rem; color: #a78bfa;">
-              Fits in GPT-4o, Claude &amp; Cursor
-            </div>
-          </div>
-        </div>
-
-        <!-- Interactive Comparison Navigation Tabs -->
-        <div class="comp-tabs-nav">
-          <button class="comp-tab-btn active" data-comptab="matrix">
-            <span>📊</span> Full Dimension Matrix
-          </button>
-          <button class="comp-tab-btn" data-comptab="quality">
-            <span>🔬</span> Output Quality Benchmark
-          </button>
-          <button class="comp-tab-btn" data-comptab="roi">
-            <span>💰</span> Team Financial ROI
-          </button>
-        </div>
-
-        <!-- TAB 1: FULL DIMENSION MATRIX -->
-        <div class="comp-tab-pane active" id="pane-comp-matrix">
-          <div class="comp-table-container">
-            <table class="comp-table">
-              <thead>
-                <tr>
-                  <th style="width: 26%;">Metric / Dimension</th>
-                  <th style="width: 22%;">Repomix (Standard XML)</th>
-                  <th style="width: 22%;">Repomix (--compress Outline)</th>
-                  <th class="col-highlight" style="width: 30%;">Codebase-Trainer v1.3.0</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Whole-Repo Prompt Tokens</span>
-                    <span class="comp-feature-desc">Tokens injected into LLM context window</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">4,550,068 tokens</span>
-                    <div class="comp-feature-desc">18.36 MB raw file dump</div>
-                  </td>
-                  <td>
-                    <span class="val-bad">1,707,332 tokens</span>
-                    <div class="comp-feature-desc">6.49 MB Tree-sitter outline</div>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-cyan); font-weight: bold;">0 prompt tokens</span>
-                    <span class="badge-status badge-champion">100% ZERO DUMP</span>
-                    <div class="comp-feature-desc">4.2 MB local AST &amp; vector index store</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Single Task Query Context</span>
-                    <span class="comp-feature-desc">e.g. GeoTracker Analytics / Auth</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">4,550,068 tokens</span>
-                    <div class="comp-feature-desc">All files dumped unconditionally</div>
-                  </td>
-                  <td>
-                    <span class="val-bad">1,707,332 tokens</span>
-                    <div class="comp-feature-desc">All 2,900+ outlines dumped</div>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-green); font-weight: bold;">712 – 1,478 tokens</span>
-                    <span class="badge-status badge-pass">99.98% SAVINGS</span>
-                    <div class="comp-feature-desc">Targeted semantic chunks + conventions</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Claude 3.5 Sonnet (200k Limit)</span>
-                    <span class="comp-feature-desc">Feasibility in Cursor &amp; Claude Code</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-fail">❌ FAILED (22.7x over limit)</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-fail">❌ FAILED (8.5x over limit)</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="badge-status badge-pass">✅ PASS (&lt;1% window)</span>
-                    <div class="comp-feature-desc">Instant response without context overflow</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">GPT-4o (128k Limit)</span>
-                    <span class="comp-feature-desc">Feasibility in OpenAI API &amp; Copilot</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-fail">❌ FAILED (35.5x over limit)</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-fail">❌ FAILED (13.3x over limit)</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="badge-status badge-pass">✅ PASS (1.1% window)</span>
-                    <div class="comp-feature-desc">Leaves 126k tokens free for generation</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Gemini 1.5 Pro (2M Limit)</span>
-                    <span class="comp-feature-desc">Large context window pricing &amp; fit</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-fail">❌ FAILED (&gt;2M context)</span>
-                  </td>
-                  <td>
-                    <span class="badge-status badge-warn">⚠️ Fits barely ($4.26 / call)</span>
-                    <div class="comp-feature-desc">Severe attention dispersion</div>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="badge-status badge-pass">✅ PASS ($0.0036 / call)</span>
-                    <span class="badge-status badge-champion">1,180x CHEAPER</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">50-Turn Agent Session Cost</span>
-                    <span class="comp-feature-desc">Real pair programming developer cost</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Context Overflow Error</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">$213.41 / session</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-green); font-weight: bold;">$0.09 – $0.18 / session</span>
-                    <div class="comp-feature-desc">Saves $213.23 per developer per day</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">AST Skeletonizer (--max-tokens)</span>
-                    <span class="comp-feature-desc">Dynamic function body stripping</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">None (Raw code dump)</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Static whole-repo outline only</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-cyan); font-weight: bold;">Token-Budgeted AST Engine</span>
-                    <div class="comp-feature-desc">Strips bodies (/* ... */), keeps 100% signatures</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">API Contract Drift Detector</span>
-                    <span class="comp-feature-desc">Frontend fetch vs Backend route handler</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Unsupported</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Unsupported</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-green); font-weight: bold;">Built-in (cb-trainer drift)</span>
-                    <div class="comp-feature-desc">Flags 404s, method mismatches &amp; schema drift</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Call Graph &amp; Downstream Risk</span>
-                    <span class="comp-feature-desc">PageRank centrality &amp; breaking impact</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Unsupported</span>
-                  </td>
-                  <td>
-                    <span class="val-bad">Unsupported</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-green); font-weight: bold;">Built-in (cb-trainer impact)</span>
-                    <div class="comp-feature-desc">Traces direct + transitive dependent files</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <span class="comp-feature-name">Live Model Context Protocol (MCP)</span>
-                    <span class="comp-feature-desc">Native Stdio JSON-RPC integration</span>
-                  </td>
-                  <td>
-                    <span class="comp-feature-desc">Basic file sandbox tool</span>
-                  </td>
-                  <td>
-                    <span class="comp-feature-desc">Basic file sandbox tool</span>
-                  </td>
-                  <td class="col-highlight">
-                    <span class="val-good" style="color: var(--accent-cyan); font-weight: bold;">5 Live URI Resources + 14 Tools</span>
-                    <div class="comp-feature-desc">Direct MCP resource subscription in AI IDEs</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Transparent Assessment Callout -->
-          <div class="honest-insights">
-            <div class="honest-insights-title">
-              <span>⚖️ Transparent Architectural Assessment: When to Use Each Tool</span>
-            </div>
-            <div class="honest-insights-grid">
-              <div class="honest-col col-repomix">
-                <h5>Where Repomix Excels (Honest Competitor Strengths)</h5>
-                <p>
-                  Repomix is fantastic for <strong>small repositories (&lt;50 files)</strong> where you want a fast, zero-index, single-file bundle to paste into the web ChatGPT interface. It has great CLI ergonomics and broad format support (XML/Markdown/JSON) for one-off full-repo audits.
-                </p>
-              </div>
-              <div class="honest-col col-cb">
-                <h5>Where Codebase-Trainer Excels (Modern Agent Workflows)</h5>
-                <p>
-                  Codebase-Trainer is engineered for <strong>real-world production monorepos and AI IDE agent pair programming</strong> (Cursor, Claude Code, Antigravity). It eliminates multi-million-token prompt dumps, cuts agent API bills by 99.9%, tracks API contract drift, and serves dynamic context via standard MCP.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 2: QUALITY BENCHMARK DEEP-DIVE -->
-        <div class="comp-tab-pane" id="pane-comp-quality">
-          <div class="quality-benchmark-section" style="margin-top: 1rem;">
-            <div class="section-header text-center">
-              <span class="section-tag">EMPIRICAL OUTPUT QUALITY BENCHMARK</span>
-              <h3 class="section-title" style="font-size: 1.85rem;">Which Tool Produces Better LLM Output?</h3>
-              <p class="section-desc">
-                We tested an identical real-world developer prompt on both tools: <br />
-                <code style="background: rgba(255,255,255,0.06); padding: 0.2rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); color: var(--accent-cyan);">
-                  "Add a new GeoTracker brand analytics endpoint with frontend SourceUsageLineChart support"
-                </code>
-              </p>
-            </div>
-
-            <div class="quality-grid">
-              <!-- Repomix Output Card -->
-              <div class="quality-card">
-                <div class="quality-card-head">
-                  <div>
-                    <div class="quality-card-title">Repomix Ingestion</div>
-                    <div class="quality-card-sub">The Whole-Repo Dump Paradigm</div>
-                  </div>
-                  <span class="badge-status badge-fail">CONTEXT SATURATION</span>
-                </div>
-
-                <div class="quality-snippet-box">
-&lt;!-- repomix-output.xml (18.36 MB / 4.55M tokens) --&gt;
-&lt;directory_structure&gt;
-  services/post-scheduler-service/...
-  services/connection-service/...
-  services/listening-service/...
-  infra/terraform/... (28,000 lines of XML noise)
-&lt;/directory_structure&gt;
-&lt;file path="services/user-service/audit.test.ts"&gt;...&lt;/file&gt;
-&lt;file path="frontend/assets/blank_document.svg"&gt;... (329k tokens!)&lt;/file&gt;
-... [Truncated: Exceeds Claude &amp; GPT Context Limits] ...
-                </div>
-
-                <ul class="quality-points">
-                  <li>
-                    <span class="icon-bad">✕</span>
-                    <span><strong>Context Overflow Error:</strong> Instantly fails on Claude 3.5 Sonnet (200k) and GPT-4o (128k).</span>
-                  </li>
-                  <li>
-                    <span class="icon-bad">✕</span>
-                    <span><strong>"Lost in the Middle" Latency:</strong> In 2M models (Gemini Pro), takes 25–35 seconds TTFT and degrades reasoning quality.</span>
-                  </li>
-                  <li>
-                    <span class="icon-bad">✕</span>
-                    <span><strong>High Hallucination Risk:</strong> Model gets confused between schemas in <code>listening-service</code> vs <code>analytics-service</code>.</span>
-                  </li>
-                  <li>
-                    <span class="icon-bad">✕</span>
-                    <span><strong>Zero Lint &amp; Architectural Guardrails:</strong> No convention rules or downstream breaking risk analysis provided.</span>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- Codebase Trainer Output Card -->
-              <div class="quality-card card-champion">
-                <div class="quality-card-head">
-                  <div>
-                    <div class="quality-card-title" style="color: var(--accent-cyan);">Codebase-Trainer Ingestion</div>
-                    <div class="quality-card-sub">Targeted Intelligence &amp; AST Skeleton Pack</div>
-                  </div>
-                  <span class="badge-status badge-champion">100% SIGNAL DENSITY</span>
-                </div>
-
-                <div class="quality-snippet-box">
-{
-  "task": "GeoTracker brand analytics endpoint &amp; SourceUsageLineChart",
-  "tokenCount": 1478,
-  "relevantRules": { "exportStyle": "named", "typeAnnotationRequirement": true },
-  "impactAnalysis": { "breakingRiskWarning": ["analytics-service/geoTracker.routes.ts"] },
-  "topSemanticChunks": [
-    { "filePath": "frontend/.../SourceUsageLineChart.jsx", "tokens": 284 },
-    { "filePath": "services/analytics-service/.../geoTracker.routes.ts", "tokens": 312 },
-    { "filePath": "services/analytics-service/.../geoTargetBrand.ts", "tokens": 240 }
-  ]
-}
-                </div>
-
-                <ul class="quality-points">
-                  <li>
-                    <span class="icon-good">✓</span>
-                    <span><strong>100% Signal-to-Noise:</strong> Retrieves only the exact 6 files involved in the GeoTracker pipeline.</span>
-                  </li>
-                  <li>
-                    <span class="icon-good">✓</span>
-                    <span><strong>Instant &lt;1.5s Response:</strong> Fits in 1,478 tokens (0.7% of Claude 3.5 Sonnet context), answering instantaneously.</span>
-                  </li>
-                  <li>
-                    <span class="icon-good">✓</span>
-                    <span><strong>Enforced Project Norms:</strong> Injects <code>conventions.yaml</code> so LLM adheres strictly to named exports &amp; TypeScript standards.</span>
-                  </li>
-                  <li>
-                    <span class="icon-good">✓</span>
-                    <span><strong>Downstream Risk Warning:</strong> Warns the agent if modifying the brand route impacts frontend callers.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 3: TEAM FINANCIAL ROI -->
-        <div class="comp-tab-pane" id="pane-comp-roi">
-          <div class="roi-card">
-            <div class="roi-header">
-              <div>
-                <div class="roi-title">Engineering Team AI Agent ROI &amp; Cost Savings</div>
-                <div class="roi-sub">Based on real Cursor / Claude Code active developer usage (50 queries / dev / day) on monorepos like <code>new-creatosaurus</code>.</div>
-              </div>
-              <div>
-                <span class="roi-savings-badge">ANNUALIZED SAVINGS UP TO $319,845</span>
-              </div>
-            </div>
-
-            <table class="roi-table">
-              <thead>
-                <tr>
-                  <th>Team Size</th>
-                  <th>Queries / Day</th>
-                  <th>Cost with Repomix (Compressed)</th>
-                  <th>Cost with Codebase-Trainer</th>
-                  <th>Monthly Cash Saved</th>
-                  <th>Annualized Team ROI</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Solo Developer (1)</strong></td>
-                  <td>50</td>
-                  <td><span class="val-bad">$4,268 / mo</span></td>
-                  <td><span class="val-good" style="color: var(--accent-green); font-weight: bold;">$1.80 / mo</span></td>
-                  <td><span class="val-good">$4,266 / mo</span></td>
-                  <td><span class="roi-savings-badge">+$51,192 / yr</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Startup Core Team (5)</strong></td>
-                  <td>250</td>
-                  <td><span class="val-bad">$21,341 / mo</span></td>
-                  <td><span class="val-good" style="color: var(--accent-green); font-weight: bold;">$9.00 / mo</span></td>
-                  <td><span class="val-good">$21,332 / mo</span></td>
-                  <td><span class="roi-savings-badge">+$255,984 / yr</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Mid-size Org (20)</strong></td>
-                  <td>1,000</td>
-                  <td><span class="val-bad">$85,364 / mo</span></td>
-                  <td><span class="val-good" style="color: var(--accent-green); font-weight: bold;">$36.00 / mo</span></td>
-                  <td><span class="val-good">$85,328 / mo</span></td>
-                  <td><span class="roi-savings-badge">+$1,023,936 / yr</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Enterprise Engineering (50)</strong></td>
-                  <td>2,500</td>
-                  <td><span class="val-bad">$213,410 / mo</span></td>
-                  <td><span class="val-good" style="color: var(--accent-green); font-weight: bold;">$90.00 / mo</span></td>
-                  <td><span class="val-good">$213,320 / mo</span></td>
-                  <td><span class="roi-savings-badge">+$2,559,840 / yr</span></td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
-              <span style="font-size: 0.8rem; color: var(--text-dim); font-family: var(--font-mono);">
-                * Calculations based on Gemini 1.5 Pro ($2.50/M tokens for >128k context vs $1.25/M tokens for &lt;128k).
-              </span>
-              <a href="#setup" class="btn-white" style="padding: 0.5rem 1rem; font-size: 0.8rem;">START SAVING TOKENS →</a>
-            </div>
-          </div>
-        </div>
+      <div class="scene-foot reveal" data-reveal>
+        <a href="docs.html#tools" class="text-link">See real output from all eight tools →</a>
       </div>
     </div>
   </section>
 
-  <!-- Section 3: 14 MCP Tools & 5 Live Resources -->
-  <section class="section-tools" id="tools">
+  <!-- Terminal demo, typed on reveal -->
+  <section class="terminal-scene">
+    <div class="container terminal-split">
+      <div class="terminal-copy reveal" data-reveal>
+        <span class="section-tag">SEE IT</span>
+        <h2 class="section-title">Ask once.<br />Get the map.</h2>
+        <p>The same tools your agent calls over MCP, from your terminal.</p>
+      </div>
+      <div class="terminal reveal" data-reveal style="--i: 1" id="terminal">
+        <div class="terminal-bar"><span></span><span></span><span></span><em>zsh</em></div>
+        <pre class="terminal-body"><code id="terminalCode"></code><span class="caret"></span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Proof: animated comparison bars -->
+  <section class="proof-scene" id="proof">
     <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">MCP PROTOCOL SUITE • v1.3.0</span>
-        <h2 class="section-title">14 Native MCP Tools & 5 Live Resources</h2>
-        <p class="section-desc">Instantly accessible to Cursor, Claude Code, Antigravity, and VS Code via Stdio JSON-RPC.</p>
+      <div class="scene-head reveal" data-reveal>
+        <span class="section-tag">MEASURED, NOT CLAIMED</span>
+        <h2 class="section-title">Against grep, on real apps</h2>
       </div>
-
-      <!-- Live MCP Resources Spotlight -->
-      <div class="resources-spotlight">
-        <div class="resources-spotlight-header">
-          <div class="resources-title">⚡ 5 Live MCP URI Resources (Direct Context Ingestion)</div>
-          <span class="resources-badge">STANDARDIZED MCP RFC</span>
+      <div class="bars">
+        <div class="bar-row reveal" data-reveal>
+          <span class="bar-label">Right file in the top 5</span>
+          <div class="bar-pair">
+            <div class="bar bar-us" data-bar="84"><span>84%</span></div>
+            <div class="bar bar-them" data-bar="66"><span>grep 66%</span></div>
+          </div>
         </div>
-        <div class="resources-grid">
-          <div class="resource-card">
-            <code class="resource-uri">codebase://conventions</code>
-            <p class="resource-desc">Learned project norms, named export conventions, typing requirements, and Git commit guidelines.</p>
+        <div class="bar-row reveal" data-reveal style="--i: 1">
+          <span class="bar-label">Tokens read to reach it</span>
+          <div class="bar-pair">
+            <div class="bar bar-us" data-bar="27"><span>1,062</span></div>
+            <div class="bar bar-them" data-bar="100"><span>grep 3,974</span></div>
           </div>
-          <div class="resource-card">
-            <code class="resource-uri">codebase://drift</code>
-            <p class="resource-desc">Real-time cross-service API contract drift: missing parameters, HTTP method mismatches, and dead 404 routes.</p>
-          </div>
-          <div class="resource-card">
-            <code class="resource-uri">codebase://routes</code>
-            <p class="resource-desc">Full microservice route registry of REST endpoints, HTTP methods, controllers, and parameter schemas.</p>
-          </div>
-          <div class="resource-card">
-            <code class="resource-uri">codebase://graph/circular</code>
-            <p class="resource-desc">Live circular dependency audit identifying import cycles, cycle path chains, and architectural bottlenecks.</p>
-          </div>
-          <div class="resource-card">
-            <code class="resource-uri">codebase://graph/quality</code>
-            <p class="resource-desc">PageRank centrality scores, maintainability metrics, cyclomatic complexity, and hot-path sync I/O alerts.</p>
+        </div>
+        <div class="bar-row reveal" data-reveal style="--i: 2">
+          <span class="bar-label">Failing tests found for a change</span>
+          <div class="bar-pair">
+            <div class="bar bar-us" data-bar="100"><span>24 / 24</span></div>
+            <div class="bar bar-them" data-bar="21"><span>grep 5</span></div>
           </div>
         </div>
       </div>
-
-      <div class="tools-layout">
-        <div class="tools-sidebar">
-          <div class="tool-nav-item active" data-tool="get_codebase_conventions">
-            <span class="t-number">01</span>
-            <span class="t-title">get_codebase_conventions</span>
-          </div>
-          <div class="tool-nav-item" data-tool="trace_execution_flow">
-            <span class="t-number">02</span>
-            <span class="t-title">trace_execution_flow</span>
-          </div>
-          <div class="tool-nav-item" data-tool="detect_api_drift">
-            <span class="t-number">03</span>
-            <span class="t-title">detect_api_drift</span>
-          </div>
-          <div class="tool-nav-item" data-tool="get_agent_context_pack">
-            <span class="t-number">04</span>
-            <span class="t-title">get_agent_context_pack</span>
-          </div>
-          <div class="tool-nav-item" data-tool="search_codebase">
-            <span class="t-number">05</span>
-            <span class="t-title">search_codebase</span>
-          </div>
-          <div class="tool-nav-item" data-tool="get_change_impact_analysis">
-            <span class="t-number">06</span>
-            <span class="t-title">get_change_impact_analysis</span>
-          </div>
-          <div class="tool-nav-item" data-tool="scan_security_vulnerabilities">
-            <span class="t-number">07</span>
-            <span class="t-title">scan_security_vulnerabilities</span>
-          </div>
-          <div class="tool-nav-item" data-tool="analyze_codebase_quality">
-            <span class="t-number">08</span>
-            <span class="t-title">analyze_codebase_quality</span>
-          </div>
-        </div>
-
-        <div class="tool-detail-view">
-          <div class="detail-header">
-            <h3 id="activeToolName" class="detail-title">get_codebase_conventions</h3>
-            <span class="detail-badge" id="activeToolTag">MCP PROTOCOL TOOL</span>
-          </div>
-          <p id="activeToolDesc" class="detail-desc">
-            Fetch structural rules, conventions, git norms, and custom guidelines learned for this codebase.
-          </p>
-
-          <div class="code-window">
-            <div class="code-window-header">
-              <span>RESPONSE SCHEMA</span>
-              <span>JSON</span>
-            </div>
-            <pre><code id="activeToolJson">{
-  "codebaseName": "codebase-trainer",
-  "rules": {
-    "structural": {
-      "constantsPlacement": "top",
-      "exportStyle": "named",
-      "typeAnnotationRequirement": true
-    },
-    "git": {
-      "commitFormat": "Conventional Commits (feat, fix, docs)",
-      "branchNaming": "feature/*, fix/*"
-    }
-  }
-}</code></pre>
-          </div>
-        </div>
+      <div class="scene-foot reveal" data-reveal>
+        <a href="docs.html#benchmark" class="text-link">Methodology, every number, and where it loses →</a>
       </div>
     </div>
   </section>
 
-  <!-- Section 4: Dynamic Execution Flow Demo -->
-  <section class="section-flow" id="flow">
-    <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">DYNAMIC CALL GRAPH TRACING</span>
-        <h2 class="section-title">Mermaid Sequence Diagram Generator</h2>
-        <p class="section-desc">Real-time dynamic execution flow tracing without hardcoded sequence lines.</p>
-      </div>
-
-      <div class="flow-card">
-        <div class="flow-controls">
-          <label class="flow-label">FEATURE QUERY:</label>
-          <input type="text" id="flowQuery" value="E2EE encryption flow" class="dark-input" />
-          <button class="btn-white" id="runFlowBtn">TRACE FLOW</button>
-        </div>
-
-        <div class="flow-split">
-          <div class="flow-steps">
-            <h4>EXECUTION STEPS</h4>
-            <div class="step-card">
-              <span class="s-num">01</span>
-              <div>
-                <strong>Phase 1: Entrypoint (server.ts:L25-L35)</strong>
-                <p>Initiates feature query & resolves workspace repo path.</p>
-              </div>
-            </div>
-            <div class="step-card">
-              <span class="s-num">02</span>
-              <div>
-                <strong>Phase 2: Key derivation (keys.ts:L12-L28)</strong>
-                <p>Executes HKDF-SHA256 key exchange algorithm.</p>
-              </div>
-            </div>
-            <div class="step-card">
-              <span class="s-num">03</span>
-              <div>
-                <strong>Phase 3: AES-256-GCM cipher (cipher.ts:L40-L65)</strong>
-                <p>Encrypts payload with CSPRNG nonce & auth tag.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="flow-mermaid-code">
-            <div class="code-window-header">MERMAID SEQUENCE SPEC</div>
-            <pre><code>sequenceDiagram
-  autonumber
-  actor User as User / Client
-  participant server_ts as server.ts
-  participant keys_ts as keys.ts
-  participant cipher_ts as cipher.ts
-
-  User->>server_ts: 1. Initiate query "E2EE encryption flow"
-  server_ts->>keys_ts: 2. Call execution target (keys.ts)
-  keys_ts->>cipher_ts: 3. Call execution target (cipher.ts)
-  cipher_ts-->>User: Complete execution flow result</code></pre>
-          </div>
-        </div>
+  <!-- Works with -->
+  <section class="marquee-scene" aria-label="Works with">
+    <div class="marquee">
+      <div class="marquee-track">
+        <span>CLAUDE CODE</span><span>CURSOR</span><span>VS CODE</span><span>WINDSURF</span><span>NEXT.JS</span><span>EXPRESS</span><span>NESTJS</span><span>tRPC</span><span>PRISMA</span><span>DRIZZLE</span><span>TYPEORM</span>
+        <span>CLAUDE CODE</span><span>CURSOR</span><span>VS CODE</span><span>WINDSURF</span><span>NEXT.JS</span><span>EXPRESS</span><span>NESTJS</span><span>tRPC</span><span>PRISMA</span><span>DRIZZLE</span><span>TYPEORM</span>
       </div>
     </div>
   </section>
 
-  <!-- Section: Full Documentation Hub -->
-  <section class="section-docs" id="docs">
-    <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">COMPLETE MANUAL & SPECIFICATION</span>
-        <h2 class="section-title">Documentation & Setup Hub</h2>
-        <p class="section-desc">Detailed requirements, installation methods, CLI commands, and step-by-step setup guides for AI developers.</p>
-      </div>
-
-      <div class="docs-hub-layout">
-        <!-- Docs Tab Sidebar -->
-        <div class="docs-sidebar">
-          <button class="docs-nav-tab active" data-docstab="prereqs">
-            <span class="doc-icon">📋</span>
-            <span>Prerequisites</span>
-          </button>
-          <button class="docs-nav-tab" data-docstab="install">
-            <span class="doc-icon">🚀</span>
-            <span>Installation</span>
-          </button>
-          <button class="docs-nav-tab" data-docstab="idesetup">
-            <span class="doc-icon">⚙️</span>
-            <span>IDE Integration</span>
-          </button>
-          <button class="docs-nav-tab" data-docstab="cliref">
-            <span class="doc-icon">💻</span>
-            <span>CLI Commands</span>
-          </button>
-          <button class="docs-nav-tab" data-docstab="usage">
-            <span class="doc-icon">💡</span>
-            <span>How to Use / Prompts</span>
-          </button>
-          <button class="docs-nav-tab" data-docstab="faq">
-            <span class="doc-icon">🛠️</span>
-            <span>FAQ & Troubleshooting</span>
-          </button>
+  <!-- CTA -->
+  <section class="cta-scene">
+    <div class="container cta-inner reveal" data-reveal>
+      <h2 class="section-title">Two minutes to set up.</h2>
+      <p>Runs on your machine. No API keys. MIT licensed.</p>
+      <div class="hero-cta">
+        <div class="command-widget">
+          <div class="command-input">
+            <span class="command-prefix">$</span>
+            <span class="command-text">npx codebase-trainer setup</span>
+          </div>
+          <button class="btn-white" data-copy="npx codebase-trainer setup"><span>COPY</span></button>
         </div>
-
-        <!-- Docs Main Content Panel -->
-        <div class="docs-content-panel">
-          
-          <!-- Pane 1: Prerequisites -->
-          <div class="docs-pane active" id="pane-prereqs">
-            <div class="pane-header">
-              <h3>Prerequisites & System Requirements</h3>
-              <span class="badge-tag">ENVIRONMENT REQUIREMENTS</span>
-            </div>
-            <p class="pane-intro">
-              Codebase Trainer is engineered to operate 100% locally on your machine without external cloud dependencies, API subscriptions, or telemetry tracking. Ensure your development environment meets the following specifications:
-            </p>
-
-            <div class="req-grid">
-              <div class="req-card">
-                <div class="req-icon">⚡</div>
-                <h4>Node.js Runtime</h4>
-                <div class="req-version">Node.js 18.0.0+ (LTS Recommended)</div>
-                <p>Built with ES Modules (<code>"type": "module"</code>). Supports Node.js 18.x, 20.x, and 22.x LTS releases. V8 engine optimizations are utilized for fast BM25 token vectorization.</p>
-              </div>
-
-              <div class="req-card">
-                <div class="req-icon">📦</div>
-                <h4>Package Manager</h4>
-                <div class="req-version">npm v8.0+, pnpm v7+, or Yarn v1.22+</div>
-                <p>Supports zero-install execution via <code>npx codebase-trainer</code>, global binary registration via <code>npm i -g</code>, or fast pnpm workspaces.</p>
-              </div>
-
-              <div class="req-card">
-                <div class="req-icon">💻</div>
-                <h4>Operating System</h4>
-                <div class="req-version">macOS, Linux & Windows (WSL2/CMD)</div>
-                <p>Full cross-platform support for macOS (Apple Silicon M1/M2/M3 & Intel), Linux distributions (Ubuntu, Debian, Fedora, Arch), and Windows 10/11 (PowerShell, Command Prompt, and WSL2).</p>
-              </div>
-
-              <div class="req-card">
-                <div class="req-icon">🐙</div>
-                <h4>Version Control</h4>
-                <div class="req-version">Git 2.20.0+</div>
-                <p>Utilized by the Git Miner engine to extract commit conventions, git blame metadata, change impact paths, and PR review summaries automatically.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane 2: Installation Options -->
-          <div class="docs-pane" id="pane-install">
-            <div class="pane-header">
-              <h3>Installation Methods</h3>
-              <span class="badge-tag">5 DEPLOYMENT MODES</span>
-            </div>
-            <p class="pane-intro">
-              Choose the installation strategy that best fits your workflow. Zero-installation via <code>npx</code> is recommended for instantaneous setup.
-            </p>
-
-            <div class="install-block">
-              <div class="ib-header">
-                <span class="ib-num">METHOD 01</span>
-                <h4>Zero-Installation Execution (Recommended)</h4>
-                <span class="ib-tag text-green">FASTEST</span>
-              </div>
-              <p>Run instantly in any repository without globally modifying your Node.js environment:</p>
-              <div class="code-window">
-                <div class="code-window-header">TERMINAL</div>
-                <pre><code># Initialize and index current repository
-npx codebase-trainer init
-
-# Start real-time background watcher on code edits
-npx codebase-trainer watch</code></pre>
-              </div>
-            </div>
-
-            <div class="install-block">
-              <div class="ib-header">
-                <span class="ib-num">METHOD 02</span>
-                <h4>Global NPM Package Installation</h4>
-                <span class="ib-tag">CLI BINARY</span>
-              </div>
-              <p>Install the <code>cb-trainer</code> executable globally across your system:</p>
-              <div class="code-window">
-                <div class="code-window-header">TERMINAL</div>
-                <pre><code># Install globally via npm
-npm install -g codebase-trainer
-
-# Verify global CLI installation
-cb-trainer --help
-
-# Run CLI commands directly
-cb-trainer status</code></pre>
-              </div>
-            </div>
-
-            <div class="install-block">
-              <div class="ib-header">
-                <span class="ib-num">METHOD 03</span>
-                <h4>GitHub Actions CI/CD Pipeline</h4>
-                <span class="ib-tag text-cyan">AUTOMATED CI</span>
-              </div>
-              <p>Add automated API contract drift detection, security audits, and SARIF vulnerability scanning to every Pull Request:</p>
-              <div class="code-window">
-                <div class="code-window-header">.github/workflows/ci.yml</div>
-                <pre><code>name: Codebase Trainer CI
-on: [push, pull_request]
-
-jobs:
-  codebase-intelligence:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Index Codebase & Check API Drift
-        run: |
-          npx codebase-trainer init
-          npx codebase-trainer drift
-          npx codebase-trainer ci
-      - name: Upload SARIF Security Report
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: .codebase/results.sarif</code></pre>
-              </div>
-            </div>
-
-            <div class="install-block">
-              <div class="ib-header">
-                <span class="ib-num">METHOD 04</span>
-                <h4>Docker Containerized Deployment</h4>
-                <span class="ib-tag">ISOLATED CONTAINER</span>
-              </div>
-              <p>Run Codebase Trainer inside an isolated Docker container with mounted local volumes:</p>
-              <div class="code-window">
-                <div class="code-window-header">TERMINAL</div>
-                <pre><code># Build local Docker image
-docker build -t codebase-trainer:latest .
-
-# Run MCP server inside container linked to your project
-docker run -i --rm -v "$(pwd):/workspace" codebase-trainer:latest mcp</code></pre>
-              </div>
-            </div>
-
-            <div class="install-block">
-              <div class="ib-header">
-                <span class="ib-num">METHOD 05</span>
-                <h4>Build from GitHub Source</h4>
-                <span class="ib-tag">DEVELOPER BUILD</span>
-              </div>
-              <p>Clone the open-source repository, install dependencies, and build locally:</p>
-              <div class="code-window">
-                <div class="code-window-header">TERMINAL</div>
-                <pre><code>git clone https://github.com/om0852/codebase-trainer.git
-cd codebase-trainer
-npm install
-npm run build
-npm link</code></pre>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane 3: IDE Integration Setup -->
-          <div class="docs-pane" id="pane-idesetup">
-            <div class="pane-header">
-              <h3>IDE Integration & Live MCP Resources</h3>
-              <span class="badge-tag">STEP-BY-STEP CONFIG</span>
-            </div>
-            <p class="pane-intro">
-              Connect Codebase Trainer directly to your favorite AI-powered code editor via the Model Context Protocol (MCP) and unlock 14 native tools plus 5 live URI resources.
-            </p>
-
-            <div class="ide-guide-card">
-              <h4>Cursor IDE Integration</h4>
-              <ol class="setup-steps-list">
-                <li>Open <strong>Cursor IDE</strong> and navigate to <code>Settings</code> → <code>Features</code> → <code>MCP</code>.</li>
-                <li>Click <strong>+ Add New MCP Server</strong>.</li>
-                <li>Set <strong>Name</strong> to <code>codebase-trainer</code> and <strong>Type</strong> to <code>command</code>.</li>
-                <li>In the <strong>Command</strong> field, enter: <code>npx -y codebase-trainer mcp</code>.</li>
-                <li>Or edit <code>.cursor/mcp.json</code> directly in your workspace:</li>
-              </ol>
-              <div class="code-window">
-                <div class="code-window-header">.cursor/mcp.json</div>
-                <pre><code>{
-  "mcpServers": {
-    "codebase-trainer": {
-      "command": "npx",
-      "args": ["-y", "codebase-trainer", "mcp"]
-    }
-  }
-}</code></pre>
-              </div>
-            </div>
-
-            <div class="ide-guide-card">
-              <h4>Antigravity IDE Integration</h4>
-              <ol class="setup-steps-list">
-                <li>Locate your global Antigravity config file at <code>%USERPROFILE%\.gemini\config\mcp_config.json</code> (Windows) or <code>~/.gemini/config/mcp_config.json</code> (macOS/Linux).</li>
-                <li>Add the <code>codebase-trainer</code> entry under <code>mcpServers</code>:</li>
-              </ol>
-              <div class="code-window">
-                <div class="code-window-header">mcp_config.json</div>
-                <pre><code>{
-  "mcpServers": {
-    "codebase-trainer": {
-      "$typeName": "exa.cascade_plugins_pb.CascadePluginCommandTemplate",
-      "command": "npx",
-      "args": ["-y", "codebase-trainer", "mcp"],
-      "env": {}
-    }
-  }
-}</code></pre>
-              </div>
-            </div>
-
-            <div class="ide-guide-card">
-              <h4>Claude Code CLI & Claude Desktop Integration</h4>
-              <ol class="setup-steps-list">
-                <li>For <strong>Claude Code CLI</strong>, run: <code>claude mcp add codebase-trainer -- npx -y codebase-trainer mcp</code>.</li>
-                <li>For <strong>Claude Desktop</strong>, open <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows) or <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) and paste:</li>
-              </ol>
-              <div class="code-window">
-                <div class="code-window-header">claude_desktop_config.json</div>
-                <pre><code>{
-  "mcpServers": {
-    "codebase-trainer": {
-      "command": "npx",
-      "args": ["-y", "codebase-trainer", "mcp"]
-    }
-  }
-}</code></pre>
-              </div>
-            </div>
-
-            <div class="ide-guide-card">
-              <h4>Direct Ingestion via Live MCP URI Resources</h4>
-              <p>In any MCP-connected agent session (Cursor Composer, Claude Code, or Antigravity), you can reference live URI resources directly in your chat prompt:</p>
-              <div class="code-window">
-                <div class="code-window-header">PROMPT EXAMPLE</div>
-                <pre><code>"Please read codebase://conventions and codebase://drift, then implement our new user profile endpoint without breaking existing schemas."</code></pre>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane 4: CLI Commands Reference -->
-          <div class="docs-pane" id="pane-cliref">
-            <div class="pane-header">
-              <h3>CLI Command Reference</h3>
-              <span class="badge-tag">FULL 13-SUBCOMMAND SUITE</span>
-            </div>
-            <p class="pane-intro">
-              Codebase Trainer provides a comprehensive suite of 13 CLI subcommands for building, querying, scanning, skeletonizing, and monitoring local codebase intelligence.
-            </p>
-
-            <div class="cli-table-wrap">
-              <table class="cli-table">
-                <thead>
-                  <tr>
-                    <th>Command</th>
-                    <th>Description</th>
-                    <th>Example Usage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><code>codebase-trainer init</code></td>
-                    <td>Indexes repository AST facts, imports, export symbols, conventions, BM25, and 128D local dense vectors into <code>.codebase/</code>.</td>
-                    <td><code>npx codebase-trainer init</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer watch</code></td>
-                    <td>Launches active background file watcher that incrementally re-indexes AST facts instantly whenever files are saved.</td>
-                    <td><code>npx codebase-trainer watch</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer mcp</code></td>
-                    <td>Starts Stdio MCP Server to handle JSON-RPC requests from AI IDE agents (Cursor, Antigravity, Claude Code, VS Code).</td>
-                    <td><code>npx codebase-trainer mcp</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer drift</code></td>
-                    <td>Runs cross-service API contract drift detector, checking client-side fetch calls against backend routes for 404s and schema mismatches.</td>
-                    <td><code>npx codebase-trainer drift</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer context &lt;task&gt;</code></td>
-                    <td>Generates a token-budgeted AI agent context pack with automatic AST skeletonization (52%–85% token reduction).</td>
-                    <td><code>npx codebase-trainer context "refactor auth" --max-tokens 4000</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer search &lt;query&gt;</code></td>
-                    <td>Executes Reciprocal Rank Fusion (RRF) search combining Okapi BM25, 128D dense vector embeddings, and PageRank.</td>
-                    <td><code>npx codebase-trainer search "encryption key derivation"</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer flow &lt;query&gt;</code></td>
-                    <td>Traces dynamic execution call graphs across modules and outputs interactive Mermaid sequence diagrams.</td>
-                    <td><code>npx codebase-trainer flow "auth validation"</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer impact &lt;file&gt;</code></td>
-                    <td>Analyzes git diffs and AST callers to calculate downstream change impact and breaking risk scores before committing code.</td>
-                    <td><code>npx codebase-trainer impact src/mcp/server.ts</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer security</code></td>
-                    <td>Scans indexed AST nodes for hardcoded API keys, JWT secrets, unsafe `eval()`, and SQL injection vulnerabilities.</td>
-                    <td><code>npx codebase-trainer security</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer audit</code></td>
-                    <td>Evaluates code quality, detects circular imports, high cyclomatic complexity, PageRank centrality, and sync I/O hot paths.</td>
-                    <td><code>npx codebase-trainer audit</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer routes</code></td>
-                    <td>Extracts all REST API endpoints, HTTP methods, and parameter schemas into an OpenAPI microservice registry.</td>
-                    <td><code>npx codebase-trainer routes</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer ui</code></td>
-                    <td>Generates an interactive Mermaid architecture and circular dependency visualizer in <code>.codebase/dashboard.html</code>.</td>
-                    <td><code>npx codebase-trainer ui</code></td>
-                  </tr>
-                  <tr>
-                    <td><code>codebase-trainer ci</code></td>
-                    <td>Exports SARIF security static audit logs for native integration with GitHub Security / Code Scanning CI/CD pipelines.</td>
-                    <td><code>npx codebase-trainer ci</code></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Pane 5: How to Use & Workflow -->
-          <div class="docs-pane" id="pane-usage">
-            <div class="pane-header">
-              <h3>How to Use & Prompting Guide</h3>
-              <span class="badge-tag">AI AGENT WORKFLOWS</span>
-            </div>
-            <p class="pane-intro">
-              Once configured, your AI assistant automatically gains access to all 14 Codebase Trainer MCP tools and 5 live resources. Here are real-world prompting patterns to get maximum accuracy:
-            </p>
-
-            <div class="prompt-guide-grid">
-              <div class="pg-card">
-                <div class="pg-title">🔍 API Contract Drift Auditing</div>
-                <div class="pg-prompt">
-                  "Run <code>@codebase-trainer detect_api_drift</code> across our repo and check if any frontend fetch calls are missing required backend payload parameters."
-                </div>
-                <p>Catches schema drift, 404 endpoints, and HTTP method mismatches before changes get deployed to staging.</p>
-              </div>
-
-              <div class="pg-card">
-                <div class="pg-title">📦 Token-Budgeted Context Packing</div>
-                <div class="pg-prompt">
-                  "Use <code>@codebase-trainer get_agent_context_pack</code> with task 'Implement Stripe webhooks' and budget 5000 tokens."
-                </div>
-                <p>The AST skeletonizer automatically strips function bodies while preserving all interface signatures and types, fitting large files cleanly inside prompt limits.</p>
-              </div>
-
-              <div class="pg-card">
-                <div class="pg-title">⚠️ Safe Refactoring & Impact Checking</div>
-                <div class="pg-prompt">
-                  "Before I refactor <code>src/mcp/server.ts</code>, use <code>@codebase-trainer get_change_impact_analysis</code> to check which CLI handlers and routes could break."
-                </div>
-                <p>Prevents unintended regression bugs by checking caller dependency graphs before editing a single line of code.</p>
-              </div>
-
-              <div class="pg-card">
-                <div class="pg-title">🚀 Dynamic Architecture Flow Tracing</div>
-                <div class="pg-prompt">
-                  "Use <code>@codebase-trainer trace_execution_flow</code> to explain how our user registration and JWT issue flow operates step by step."
-                </div>
-                <p>Retrieves exact multi-module AST call graphs and presents an interactive Mermaid sequence diagram.</p>
-              </div>
-
-              <div class="pg-card">
-                <div class="pg-title">🔒 Pre-Commit Security & Convention Audit</div>
-                <div class="pg-prompt">
-                  "Run <code>@codebase-trainer scan_security_vulnerabilities</code> and check <code>codebase://conventions</code> to ensure my branch has zero exposed secrets."
-                </div>
-                <p>Instantly verifies security posture and formatting conventions locally before pushing PRs to production.</p>
-              </div>
-
-              <div class="pg-card">
-                <div class="pg-title">🌐 Live Resource Referencing</div>
-                <div class="pg-prompt">
-                  "Fetch <code>codebase://drift</code> and <code>codebase://routes</code> to list all microservice endpoints currently in use."
-                </div>
-                <p>Direct zero-latency ingestion of living project resources without requiring file grepping or manual documentation lookups.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane 6: Troubleshooting & FAQ -->
-          <div class="docs-pane" id="pane-faq">
-            <div class="pane-header">
-              <h3>Frequently Asked Questions & Troubleshooting</h3>
-              <span class="badge-tag">SOLUTIONS & FAQ</span>
-            </div>
-
-            <div class="faq-list">
-              <div class="faq-item">
-                <h4>Q: Do I need to pay for any cloud subscription or API tokens?</h4>
-                <p>No! Codebase Trainer runs 100% locally on your Node.js runtime. There are zero API keys required, zero third-party cloud servers involved, and zero subscription costs.</p>
-              </div>
-
-              <div class="faq-item">
-                <h4>Q: How does Codebase Trainer save 99.98% of AI prompt tokens?</h4>
-                <p>Instead of feeding thousands of raw files into your LLM prompt window (which wastes millions of tokens and causes context overflow), Codebase Trainer feeds precise AST facts, Okapi BM25 ranked chunks, local dense vector embeddings, and call graphs directly to the agent. Furthermore, the v1.3.0 AST skeletonizer compresses source files by 52%–85% by stripping implementation bodies while preserving interface signatures.</p>
-              </div>
-
-              <div class="faq-item">
-                <h4>Q: How does the Cross-Service API Contract Drift Detector work?</h4>
-                <p>The drift engine parses frontend client calls (e.g., <code>fetch()</code>, <code>axios.get()</code>, <code>api.post()</code>) and correlates them with indexed backend route controllers across Express, Fastify, Next.js, and NestJS. It flags endpoint 404s, HTTP method mismatches (e.g. GET vs POST), and missing query/body parameters in ~18 milliseconds.</p>
-              </div>
-
-              <div class="faq-item">
-                <h4>Q: What should I do if my IDE says "MCP Server connection failed"?</h4>
-                <p>Verify that Node.js 18.0.0+ is installed and accessible in your system's <code>PATH</code>. If running <code>npx -y codebase-trainer mcp</code> fails, try running <code>npm i -g codebase-trainer</code> globally first, then set the command in your IDE to <code>cb-trainer</code> with args <code>["mcp"]</code>.</p>
-              </div>
-
-              <div class="faq-item">
-                <h4>Q: Where is the codebase index stored?</h4>
-                <p>The codebase index is stored locally inside your project directory at <code>.codebase/</code> (<code>index.db.json</code>, <code>conventions.yaml</code>, <code>results.sarif</code>, <code>dashboard.html</code>). You can add <code>.codebase/*.db.json</code> to your <code>.gitignore</code> if desired.</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        <a href="docs.html#quickstart" class="btn-outline btn-lg">QUICK START →</a>
       </div>
     </div>
   </section>
 
-  <!-- Section 5: IDE Configuration Generator -->
-  <section class="section-setup" id="setup">
-    <div class="container">
-      <div class="section-header text-center">
-        <span class="section-tag">IDE INTEGRATION</span>
-        <h2 class="section-title">One-Click Config Generator</h2>
-        <p class="section-desc">Select your preferred AI editor to copy ready-to-use MCP configuration settings.</p>
-      </div>
-
-      <div class="ide-container">
-        <div class="ide-tabs" role="tablist" aria-label="IDE Configurations">
-          <button class="ide-tab active" data-ide="cursor" role="tab" aria-selected="true">CURSOR IDE</button>
-          <button class="ide-tab" data-ide="antigravity" role="tab" aria-selected="false">ANTIGRAVITY IDE</button>
-          <button class="ide-tab" data-ide="claude" role="tab" aria-selected="false">CLAUDE CODE / DESKTOP</button>
-          <button class="ide-tab" data-ide="vscode" role="tab" aria-selected="false">VS CODE</button>
-        </div>
-
-        <div class="ide-config-body">
-          <div class="config-meta">
-            <span id="configPath">Cursor IDE -> Settings -> Features -> MCP -> Add New MCP Server</span>
-            <button class="btn-white" id="copyConfigBtn">COPY JSON</button>
-          </div>
-          <div class="code-window">
-            <pre><code id="configJsonDisplay">{
-  "mcpServers": {
-    "codebase-trainer": {
-      "command": "npx",
-      "args": ["-y", "codebase-trainer", "mcp"]
-    }
-  }
-}</code></pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer Section -->
   <footer class="footer">
     <div class="container footer-wrapper">
       <div class="footer-left">
         <span class="brand-mark">CODEBASE</span>
-        <span class="brand-sub">TRAINER v1.3.0</span>
-        <p class="copyright">© 2026 Codebase Trainer. Open Source under MIT License.</p>
+        <span class="brand-sub">TRAINER v2.0.0</span>
+        <p class="copyright">Open source under the MIT License.</p>
       </div>
-
       <div class="footer-nav">
-        <a href="#about">ARCHITECTURE</a>
-        <a href="#benchmark">BENCHMARK</a>
-        <a href="#tools">MCP SUITE</a>
-        <a href="#docs">DOCUMENTATION</a>
-        <a href="https://github.com/om0852/codebase-trainer" target="_blank">GITHUB</a>
-        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank">NPM PACKAGE</a>
+        <a href="docs.html">DOCS</a>
+        <a href="docs.html#benchmark">BENCHMARK</a>
+        <a href="https://github.com/om0852/codebase-trainer" target="_blank" rel="noopener">GITHUB</a>
+        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank" rel="noopener">NPM</a>
       </div>
     </div>
   </footer>
 
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/landing.js"></script>
 </body>
 </html>

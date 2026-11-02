@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs — Codebase Trainer</title>
+  <meta name="description" content="Codebase Trainer gives Claude Code, Cursor and VS Code agents the whole feature in one call: UI, API, route handler, service, data model, auth checks and the tests to run, with file:line evidence, within a token budget, fully offline." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cpath d='M21 11.5a7 7 0 1 0 0 9' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="/src/site.css" />
+</head>
+<body class="docs-body">
+  <header class="navbar" id="navbar">
+    <div class="nav-wrapper">
+      <a href="./" class="brand-logo">
+        <span class="brand-mark">CODEBASE</span>
+        <span class="brand-sub">TRAINER · DOCS</span>
+      </a>
+      <nav class="nav-menu" id="navMenu">
+        <a href="./" class="nav-item">HOME</a>
+        <a href="#quickstart" class="nav-item">QUICK START</a>
+        <a href="#tools" class="nav-item">TOOLS</a>
+        <a href="#cli" class="nav-item">CLI</a>
+        <a href="#benchmark" class="nav-item">BENCHMARK</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="https://github.com/om0852/codebase-trainer" target="_blank" rel="noopener" class="btn-outline">GITHUB</a>
+        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank" rel="noopener" class="btn-white">NPM v2.0.0</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">MENU</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="docs-shell container">
+    <aside class="docs-aside" aria-label="Documentation sections">
+        <div class="docs-nav-group"><span class="docs-nav-label">Get started</span>
+          <a href="#quickstart" class="docs-nav-link">Quick start</a>
+          <a href="#requirements" class="docs-nav-link">Requirements</a>
+          <a href="#clients" class="docs-nav-link">Connect your editor</a>
+          <a href="#setup-generator" class="docs-nav-link">Config generator</a>
+        </div>
+        <div class="docs-nav-group"><span class="docs-nav-label">Using it</span>
+          <a href="#tools" class="docs-nav-link">The eight tools</a>
+          <a href="#prompts" class="docs-nav-link">Prompts that work</a>
+          <a href="#how" class="docs-nav-link">How it works</a>
+        </div>
+        <div class="docs-nav-group"><span class="docs-nav-label">Reference</span>
+          <a href="#cli" class="docs-nav-link">CLI reference</a>
+          <a href="#config" class="docs-nav-link">Configuration</a>
+          <a href="#neural" class="docs-nav-link">Neural search</a>
+          <a href="#ci" class="docs-nav-link">CI and code scanning</a>
+        </div>
+        <div class="docs-nav-group"><span class="docs-nav-label">Results</span>
+          <a href="#benchmark" class="docs-nav-link">Benchmark and limits</a>
+        </div>
+        <div class="docs-nav-group"><span class="docs-nav-label">Help</span>
+          <a href="#upgrade" class="docs-nav-link">Upgrading from 1.x</a>
+          <a href="#faq" class="docs-nav-link">Troubleshooting</a>
+        </div>
+    </aside>
+
+    <main class="docs-main">
+      <div class="docs-intro">
+        <span class="section-tag">DOCUMENTATION · v2.0.0</span>
+        <h1>Codebase Trainer docs</h1>
+        <p>Set it up, learn the eight tools, configure it for your team, and see exactly how it was measured.</p>
+      </div>
+      <section class="doc-section" id="quickstart">
+
+            <h2>Quick start</h2>
+            <p class="pane-intro">Run one command in the root of your repository, restart your editor, and ask your agent a question.</p>
+            <div class="install-block">
+              <div class="ib-header"><span class="ib-num">STEP 1</span><h4>Register the server and build the index</h4></div>
+              <div class="code-window">
+                <div class="code-window-header"><span>TERMINAL · REPO ROOT</span><button class="copy-mini" data-copy="npx codebase-trainer setup">COPY</button></div>
+                <pre><code>npx codebase-trainer setup</code></pre>
+              </div>
+              <p>It finds the editors you use and adds <code>codebase-trainer</code> to their project config (<code>.mcp.json</code> for Claude Code, <code>.cursor/mcp.json</code>, <code>.vscode/mcp.json</code>), keeping any other servers in those files. Then it indexes the repo. Add <code>--dry-run</code> to see what it would write, or <code>--client claude cursor</code> to choose.</p>
+            </div>
+            <div class="install-block">
+              <div class="ib-header"><span class="ib-num">STEP 2</span><h4>Restart your editor</h4></div>
+              <p>The editor starts the server itself (<code>npx -y codebase-trainer mcp</code>) from the repository folder. Commit the config files so your team gets the same setup.</p>
+            </div>
+            <div class="install-block">
+              <div class="ib-header"><span class="ib-num">STEP 3</span><h4>Ask</h4></div>
+              <div class="code-window">
+                <div class="code-window-header"><span>PROMPT</span></div>
+                <pre><code>Use codebase-trainer feature_slice to show me everything involved in password reset,
+then tell me which files I need to change to add rate limiting.</code></pre>
+              </div>
+            </div>
+      </section>
+      <section class="doc-section" id="requirements">
+
+            <h2>Requirements</h2>
+            <div class="req-grid">
+              <div class="req-card">
+                <h4>Node.js</h4>
+                <div class="req-version">22 or later (22.13+ recommended)</div>
+                <p>The index uses Node's built-in <code>node:sqlite</code>. On Node versions without it, the index falls back to a JSON file automatically. Tested on Node 22 and 24.</p>
+              </div>
+              <div class="req-card">
+                <h4>Operating system</h4>
+                <div class="req-version">Windows, macOS, Linux</div>
+                <p>CI runs the full test suite on all three. Paths are reported with forward slashes on every platform.</p>
+              </div>
+              <div class="req-card">
+                <h4>Git</h4>
+                <div class="req-version">Any recent version</div>
+                <p>Needed for diff review, test selection for your working-tree changes, and learning commit conventions. Everything else works without it.</p>
+              </div>
+              <div class="req-card">
+                <h4>Disk and memory</h4>
+                <div class="req-version">About 2.4 KB of index per file</div>
+                <p>A 10,000-file repo needs about 24 MB in <code>.codebase/</code>. The server keeps the index and parsed files in memory while it runs.</p>
+              </div>
+            </div>
+      </section>
+      <section class="doc-section" id="clients">
+
+            <h2>Connect your editor</h2>
+            <p class="pane-intro"><code>npx codebase-trainer setup</code> does this for you. To do it by hand, add the server to your client's config. The server indexes the folder it is started in, so use project-level configs where your client supports them.</p>
+
+            <div class="ide-guide-card">
+              <h4>Claude Code</h4>
+              <p>Project config, committed with the repo: <code>.mcp.json</code> at the repo root.</p>
+              <div class="code-window">
+                <div class="code-window-header"><span>.mcp.json</span></div>
+                <pre><code>{
+  "mcpServers": {
+    "codebase-trainer": { "command": "npx", "args": ["-y", "codebase-trainer", "mcp"] }
+  }
+}</code></pre>
+              </div>
+              <p>Or from the terminal, in the repo root:</p>
+              <div class="code-window">
+                <div class="code-window-header"><span>TERMINAL</span><button class="copy-mini" data-copy="claude mcp add --scope project codebase-trainer -- npx -y codebase-trainer mcp">COPY</button></div>
+                <pre><code>claude mcp add --scope project codebase-trainer -- npx -y codebase-trainer mcp</code></pre>
+              </div>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>Cursor</h4>
+              <p><code>.cursor/mcp.json</code> in the repo (or Settings → MCP → Add new server with the same command).</p>
+              <div class="code-window">
+                <div class="code-window-header"><span>.cursor/mcp.json</span></div>
+                <pre><code>{
+  "mcpServers": {
+    "codebase-trainer": { "command": "npx", "args": ["-y", "codebase-trainer", "mcp"] }
+  }
+}</code></pre>
+              </div>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>VS Code (Copilot agent mode)</h4>
+              <p><code>.vscode/mcp.json</code> in the repo. Note the <code>servers</code> key and <code>type</code>.</p>
+              <div class="code-window">
+                <div class="code-window-header"><span>.vscode/mcp.json</span></div>
+                <pre><code>{
+  "servers": {
+    "codebase-trainer": { "type": "stdio", "command": "npx", "args": ["-y", "codebase-trainer", "mcp"] }
+  }
+}</code></pre>
+              </div>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>Windsurf and other clients</h4>
+              <p>Windsurf keeps a per-user file, <code>~/.codeium/windsurf/mcp_config.json</code>, with the same <code>mcpServers</code> entry; <code>npx codebase-trainer setup --client windsurf</code> writes it. Any MCP client that can start a stdio server works: the command is <code>npx -y codebase-trainer mcp</code>, started in the repository folder.</p>
+            </div>
+
+            <div class="ide-guide-card">
+              <h4>Faster start with a global install</h4>
+              <p><code>npm install -g codebase-trainer</code>, then use <code>cb-trainer</code> with args <code>["mcp"]</code> instead of <code>npx</code>. Upgrade with <code>npm install -g codebase-trainer@latest</code>.</p>
+            </div>
+      </section>
+      <section class="doc-section" id="setup-generator">
+<h2>Config generator</h2>
+<p class="doc-lead">Pick your editor and copy the file, or run <code>npx codebase-trainer setup</code> to write it for you.</p>
+
+<div class="setup-oneliner">
+        <div class="command-widget">
+          <div class="command-input">
+            <span class="command-prefix">$</span>
+            <span class="command-text">npx codebase-trainer setup</span>
+          </div>
+          <button class="btn-white" data-copy="npx codebase-trainer setup"><span>COPY</span></button>
+        </div>
+      </div>
+
+      <div class="ide-container">
+        <div class="ide-tabs" role="tablist" aria-label="Editor configurations">
+          <button class="ide-tab active" data-ide="claude" role="tab" aria-selected="true">CLAUDE CODE</button>
+          <button class="ide-tab" data-ide="cursor" role="tab" aria-selected="false">CURSOR</button>
+          <button class="ide-tab" data-ide="vscode" role="tab" aria-selected="false">VS CODE</button>
+          <button class="ide-tab" data-ide="windsurf" role="tab" aria-selected="false">WINDSURF</button>
+          <button class="ide-tab" data-ide="global" role="tab" aria-selected="false">GLOBAL INSTALL</button>
+        </div>
+
+        <div class="ide-config-body">
+          <div class="config-meta">
+            <span id="configPath"></span>
+            <button class="btn-white" id="copyConfigBtn">COPY</button>
+          </div>
+          <div class="code-window">
+            <pre><code id="configJsonDisplay"></code></pre>
+          </div>
+          <p class="config-note" id="configNote"></p>
+        </div>
+      </div>
+    
+      </section>
+      <section class="doc-section" id="tools">
+<h2>The eight tools</h2>
+<p class="doc-lead">Every tool takes <code>budget_tokens</code> and reports what it cut. The examples are real responses from the published 2.0.0 package on the benchmark apps, shortened where marked.</p>
+
+<div class="tools-layout">
+        <div class="tools-sidebar" role="tablist" aria-label="MCP tools">
+          <button class="tool-nav-item active" data-tool="search"><span class="t-number">01</span><span class="t-title">search</span></button>
+          <button class="tool-nav-item" data-tool="feature_slice"><span class="t-number">02</span><span class="t-title">feature_slice</span></button>
+          <button class="tool-nav-item" data-tool="trace_flow"><span class="t-number">03</span><span class="t-title">trace_flow</span></button>
+          <button class="tool-nav-item" data-tool="impact"><span class="t-number">04</span><span class="t-title">impact</span></button>
+          <button class="tool-nav-item" data-tool="review_diff"><span class="t-number">05</span><span class="t-title">review_diff</span></button>
+          <button class="tool-nav-item" data-tool="api_map"><span class="t-number">06</span><span class="t-title">api_map</span></button>
+          <button class="tool-nav-item" data-tool="codebase_overview"><span class="t-number">07</span><span class="t-title">codebase_overview</span></button>
+          <button class="tool-nav-item" data-tool="quality_scan"><span class="t-number">08</span><span class="t-title">quality_scan</span></button>
+        </div>
+
+        <div class="tool-detail-view">
+          <div class="detail-header">
+            <h3 id="activeToolName" class="detail-title">search</h3>
+            <span class="detail-badge" id="activeToolTag">FIND CODE</span>
+          </div>
+          <p id="activeToolDesc" class="detail-desc"></p>
+          <div class="ask-agent">
+            <span class="ask-label">ASK YOUR AGENT</span>
+            <p id="activeToolPrompt"></p>
+          </div>
+          <div class="code-window">
+            <div class="code-window-header">
+              <span id="activeToolSource">RESPONSE</span>
+              <span>JSON</span>
+            </div>
+            <pre><code id="activeToolJson"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="resources-spotlight">
+        <div class="resources-spotlight-header">
+          <div class="resources-title">MCP resources an agent can read directly</div>
+          <span class="resources-badge">6 RESOURCES</span>
+        </div>
+        <div class="resources-grid">
+          <div class="resource-card"><code class="resource-uri">codebase://conventions</code><p class="resource-desc">Conventions learned from the code, with the counts behind each.</p></div>
+          <div class="resource-card"><code class="resource-uri">codebase://routes</code><p class="resource-desc">Routes the repo serves and the ones it calls.</p></div>
+          <div class="resource-card"><code class="resource-uri">codebase://permissions</code><p class="resource-desc">Auth, scopes and roles per route, with findings.</p></div>
+          <div class="resource-card"><code class="resource-uri">codebase://drift</code><p class="resource-desc">Client/server contract mismatches.</p></div>
+          <div class="resource-card"><code class="resource-uri">codebase://graph/circular</code><p class="resource-desc">Import cycles.</p></div>
+          <div class="resource-card"><code class="resource-uri">codebase://graph/quality</code><p class="resource-desc">Hotspots and sync I/O in request paths.</p></div>
+        </div>
+      </div>
+    
+      </section>
+      <section class="doc-section" id="prompts">
+
+            <h2>Using it with an agent</h2>
+            <p class="pane-intro">Agents pick tools from their descriptions, so naming the tool helps the first few times. These are the moments it pays off most.</p>
+            <div class="prompt-guide-grid">
+              <div class="pg-card">
+                <div class="pg-title">Before changing a feature</div>
+                <div class="pg-prompt">"Use codebase-trainer feature_slice for 'article comments' and list what I'd need to touch to add comment editing."</div>
+                <p>One call instead of a dozen greps and file reads.</p>
+              </div>
+              <div class="pg-card">
+                <div class="pg-title">Before a refactor</div>
+                <div class="pg-prompt">"Run codebase-trainer impact on src/lib/session.ts, then give me the command to run the affected tests."</div>
+                <p>Dependents, other references, and the tests that reach the file.</p>
+              </div>
+              <div class="pg-card">
+                <div class="pg-title">Understanding a flow</div>
+                <div class="pg-prompt">"Use codebase-trainer trace_flow to show how checkout goes from the page to the database."</div>
+                <p>Ordered steps with file:line evidence, and a Mermaid diagram.</p>
+              </div>
+              <div class="pg-card">
+                <div class="pg-title">Before you commit</div>
+                <div class="pg-prompt">"Run codebase-trainer review_diff on my changes and fix anything it reports."</div>
+                <p>Secrets, broken imports, contract drift and permission problems on changed routes.</p>
+              </div>
+              <div class="pg-card">
+                <div class="pg-title">Auditing access</div>
+                <div class="pg-prompt">"Use codebase-trainer api_map with section permissions and explain each finding."</div>
+                <p>Routes without guards, deletes allowed by edit scopes, read scopes on writes.</p>
+              </div>
+              <div class="pg-card">
+                <div class="pg-title">Joining a codebase</div>
+                <div class="pg-prompt">"Use codebase-trainer codebase_overview and summarise the conventions I should follow here."</div>
+                <p>Conventions with the evidence behind each, module diagram and hotspots.</p>
+              </div>
+            </div>
+      </section>
+      <section class="doc-section" id="how">
+<h2>How it works</h2>
+<p class="doc-lead">Everything runs inside one local Node.js process. No API keys, no vector database, no language server, no telemetry.</p>
+
+<div class="pipeline">
+        <div class="pipeline-step">
+          <span class="pipeline-num">1</span>
+          <h4>Parse</h4>
+          <p>TypeScript, TSX, JavaScript and Python are parsed with tree-sitter (grammars ship in the package). Other languages use pattern-based extractors.</p>
+        </div>
+        <div class="pipeline-step">
+          <span class="pipeline-num">2</span>
+          <h4>Link</h4>
+          <p>Imports (tsconfig paths, workspace packages), call sites, client requests to route handlers, ORM calls to models, dependency injection, tRPC procedures and auth guards become one graph.</p>
+        </div>
+        <div class="pipeline-step">
+          <span class="pipeline-num">3</span>
+          <h4>Index</h4>
+          <p>Syntax-aligned chunks in a SQLite database (<code>.codebase/index.sqlite</code>) with BM25 terms and PageRank scores. Only changed files are re-indexed.</p>
+        </div>
+        <div class="pipeline-step">
+          <span class="pipeline-num">4</span>
+          <h4>Serve</h4>
+          <p>Eight MCP tools over stdio, each with a token budget. While the server runs it watches the repo, so no tool call re-scans it.</p>
+        </div>
+      </div>
+
+      <div class="limits-card">
+        <h4>Honest limits</h4>
+        <ul>
+          <li>Static analysis: dynamic dispatch, runtime configuration and guards applied where a router is mounted are not traced.</li>
+          <li><code>feature_slice</code> favours recall: about a third of the files it returns were labelled as needed, the rest are neighbours a change often touches.</li>
+          <li>The permission map is a heuristic with evidence, not a security audit. It checks for a signed-in user, not whether that user may act on a record.</li>
+          <li>Search is keyword-based unless you opt in to the neural model; it matches word families (resolve / resolver / resolution), not synonyms.</li>
+          <li>Best on JavaScript and TypeScript; Python is partly supported, Go, Java and Rust only lightly.</li>
+        </ul>
+      </div>
+    
+      </section>
+      <section class="doc-section" id="cli">
+
+            <h2>CLI reference</h2>
+            <p class="pane-intro">Every command takes <code>-d &lt;path&gt;</code> for the repo (default: current folder), and most take <code>--json</code>. Run <code>cb-trainer &lt;command&gt; --help</code> for all options. With <code>npx</code>, use <code>npx codebase-trainer &lt;command&gt;</code>.</p>
+            <div class="cli-table-wrap">
+              <table class="cli-table">
+                <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+                <tbody>
+                  <tr class="cli-group"><td colspan="2">Set up</td></tr>
+                  <tr><td><code>setup [--client …] [--dry-run]</code></td><td>Register the MCP server with Claude Code, Cursor, VS Code (Windsurf when named) and build the first index.</td></tr>
+                  <tr><td><code>mcp</code></td><td>Start the MCP server over stdio (your editor runs this).</td></tr>
+                  <tr><td><code>init [--embeddings]</code></td><td>Build the index and learn conventions; <code>--embeddings</code> also enables neural search.</td></tr>
+                  <tr><td><code>embeddings enable | disable | status</code></td><td>Turn the optional local neural model on or off for this repo.</td></tr>
+                  <tr class="cli-group"><td colspan="2">Understand code</td></tr>
+                  <tr><td><code>search "&lt;query&gt;"</code></td><td>Ranked code snippets with file:line.</td></tr>
+                  <tr><td><code>slice "&lt;feature&gt;" [--budget 6000]</code></td><td>Everything a feature touches, by layer, packed to a token budget.</td></tr>
+                  <tr><td><code>flow "&lt;feature&gt;"</code></td><td>Execution flow with evidence and a Mermaid sequence diagram.</td></tr>
+                  <tr><td><code>impact &lt;file or symbol&gt;</code></td><td>Dependents, references and the tests to run.</td></tr>
+                  <tr><td><code>tests [files…] [--base main] [-c]</code></td><td>Tests affected by the given files, or by your git changes; <code>-c</code> prints only the commands.</td></tr>
+                  <tr><td><code>architecture</code></td><td>Module dependency diagram (Mermaid) and import cycles.</td></tr>
+                  <tr class="cli-group"><td colspan="2">Review and audit</td></tr>
+                  <tr><td><code>review [--base main] [--format sarif] [-o file]</code></td><td>Check your diff (or one file); exits non-zero on error findings.</td></tr>
+                  <tr><td><code>permissions [--findings-only]</code></td><td>Auth requirement, scopes and roles per route, with findings.</td></tr>
+                  <tr><td><code>routes</code> · <code>drift</code></td><td>Routes served and called; client/server contract mismatches.</td></tr>
+                  <tr><td><code>security</code> · <code>duplicates</code> · <code>audit</code></td><td>Secrets and risky code; duplicated blocks; import cycles and sync I/O.</td></tr>
+                  <tr><td><code>pr-review [--base main]</code></td><td>A Markdown review of your diff for a pull request.</td></tr>
+                  <tr class="cli-group"><td colspan="2">Maintain</td></tr>
+                  <tr><td><code>update</code> · <code>watch</code></td><td>Re-index changed files now, or on every save. Search already refreshes changed files before each query.</td></tr>
+                  <tr><td><code>docs</code> · <code>ui</code></td><td>Write an onboarding guide; open an HTML dashboard.</td></tr>
+                </tbody>
+              </table>
+            </div>
+      </section>
+      <section class="doc-section" id="config">
+
+            <h2>Configuration</h2>
+            <p class="pane-intro">Nothing needs configuring. For team-wide settings, commit a <code>codebase-trainer.yaml</code> at the repo root. Unknown or malformed settings are ignored and reported by <code>codebase_overview</code>.</p>
+            <div class="code-window">
+              <div class="code-window-header"><span>codebase-trainer.yaml</span></div>
+              <pre><code>exclude: ["generated/**", "**/*.snap"]   # on top of .gitignore and .codebaseignore
+embeddings: false                         # or { enabled: true, model: Xenova/all-MiniLM-L6-v2 }
+auth:
+  guards: [ensureTeamMember]              # your own auth middleware, for the permission map
+  publicPaths: ["/api/status"]            # routes that are public by design
+budgets:
+  defaultTokens: 8000                     # per tool call
+  featureSliceTokens: 6000</code></pre>
+            </div>
+            <h4 class="pane-subhead">What is indexed</h4>
+            <p>Source, config and docs files up to 500 KB that are not excluded by <code>.gitignore</code>, <code>.git/info/exclude</code>, <code>.codebaseignore</code> or the built-in list (<code>node_modules</code>, <code>dist</code>, <code>build</code>, <code>.next</code>, virtualenvs, caches). Credential files such as <code>.env</code> and <code>*.pem</code> are never indexed, and secrets inside indexed files are redacted.</p>
+            <h4 class="pane-subhead">Environment variables</h4>
+            <div class="cli-table-wrap">
+              <table class="cli-table">
+                <thead><tr><th>Variable</th><th>Effect</th></tr></thead>
+                <tbody>
+                  <tr><td><code>CODEBASE_TRAINER_AUTO_REFRESH=0</code></td><td>Do not re-index changed files before a search; results from changed files are marked <code>stale</code>.</td></tr>
+                  <tr><td><code>CODEBASE_TRAINER_EMBEDDINGS=0</code></td><td>Turn neural search off even if the repo opted in.</td></tr>
+                  <tr><td><code>CODEBASE_TRAINER_MODEL_CACHE</code></td><td>Where the neural model is stored (default <code>~/.cache/codebase-trainer/models</code>).</td></tr>
+                  <tr><td><code>CODEBASE_ENCRYPTION_KEY</code></td><td>Encrypt the index at rest (AES-256-GCM); <code>init --encrypt</code> creates a local key instead.</td></tr>
+                  <tr><td><code>CODEBASE_TRAINER_PARSER=regex</code></td><td>Use the pattern-based extractors instead of tree-sitter.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h4 class="pane-subhead">Files it writes</h4>
+            <p>Everything generated lives in <code>.codebase/</code> (index, conventions, reports); add it to <code>.gitignore</code>. Commit <code>codebase-trainer.yaml</code> and your editor's MCP config instead.</p>
+      </section>
+      <section class="doc-section" id="neural">
+
+            <h2>Optional neural search</h2>
+            <p class="pane-intro">A small local model whose ranking is fused with keyword search by reciprocal rank fusion. It runs on your CPU; nothing leaves your machine. Without opting in, nothing is downloaded.</p>
+            <div class="code-window">
+              <div class="code-window-header"><span>TERMINAL · REPO ROOT</span></div>
+              <pre><code>npm install @huggingface/transformers     # optional peer dependency (~300 MB with its ONNX runtime)
+cb-trainer embeddings enable              # downloads MiniLM-L6 (23 MB) once and embeds the index
+cb-trainer embeddings status
+cb-trainer embeddings disable</code></pre>
+            </div>
+            <div class="cli-table-wrap">
+              <table class="cli-table data-table">
+                <thead><tr><th>All 104 questions</th><th>Keyword only</th><th>With MiniLM-L6</th></tr></thead>
+                <tbody>
+                  <tr><td>Right file in the top 5</td><td>84%</td><td class="good">94%</td></tr>
+                  <tr><td>Mean reciprocal rank</td><td>0.71</td><td class="good">0.75</td></tr>
+                  <tr><td>Feature files in the top 10</td><td>59%</td><td class="good">65%</td></tr>
+                  <tr><td>Search time on the benchmark apps</td><td>20–40 ms</td><td class="bad">90–160 ms</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">Four small models were compared on the tuning questions (MiniLM-L6, bge-small, arctic-embed-xs, jina-v2-small); MiniLM-L6 was best and the gain held on the 28 held-out questions. Encrypted indexes keep neural search off, because vectors would be stored unencrypted. Teams can switch it on for everyone with <code>embeddings: true</code> in <code>codebase-trainer.yaml</code>.</p>
+      </section>
+      <section class="doc-section" id="ci">
+
+            <h2>CI and code scanning</h2>
+            <p class="pane-intro">Review every pull request with the same checks and see findings in GitHub's Code Scanning tab.</p>
+            <div class="code-window">
+              <div class="code-window-header"><span>.github/workflows/review.yml</span></div>
+              <pre><code>name: codebase-trainer review
+on: pull_request
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: om0852/codebase-trainer@v1
+        with: { base: "origin/${{ github.base_ref }}" }
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: codebase-trainer.sarif }</code></pre>
+            </div>
+            <p>Without the action: <code>npx codebase-trainer review --base origin/main --format sarif --output review.sarif</code>. The step fails on error-severity findings (such as a committed secret); set <code>fail-on-error: false</code> on the action to only report.</p>
+      </section>
+      <section class="doc-section" id="benchmark">
+<h2>Benchmark and limits</h2>
+<p class="doc-lead">104 hand-labelled questions on four open-source apps pinned to exact commits: taxonomy (Next.js + Prisma), node-express-realworld (Express + Prisma), nestjs-realworld (NestJS + TypeORM) and create-t3-turbo (tRPC monorepo). The baseline is what an agent does without an index: grep the question's words and open the files with the most matches. Settings were tuned on 76 questions and confirmed on 28 held out.</p>
+
+<div class="bench-tables">
+        <div class="bench-table-card">
+          <h4>Finding code (80 "where is X" questions, 24 feature questions)</h4>
+          <div class="cli-table-wrap">
+            <table class="cli-table data-table">
+              <thead><tr><th></th><th>Codebase Trainer</th><th>+ neural search</th><th>grep and read</th></tr></thead>
+              <tbody>
+                <tr><td>Right file ranked first</td><td class="good">60%</td><td>61%</td><td>24%</td></tr>
+                <tr><td>Right file in the top 5</td><td class="good">84%</td><td class="good">94%</td><td>66%</td></tr>
+                <tr><td>Mean reciprocal rank</td><td class="good">0.71</td><td class="good">0.75</td><td>0.43</td></tr>
+                <tr><td>Median tokens read to reach the right file</td><td class="good">1,062</td><td>945</td><td>3,974</td></tr>
+                <tr><td>Share of a feature's files in the top 10</td><td>59%</td><td>65%</td><td>42%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bench-table-card">
+          <h4><code>feature_slice</code>: one call per feature (24 questions)</h4>
+          <div class="cli-table-wrap">
+            <table class="cli-table data-table">
+              <thead><tr><th></th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td>Share of the needed files returned</td><td class="good">83%</td></tr>
+                <tr><td>Features with every needed file</td><td>50%</td></tr>
+                <tr><td>Median tokens for the whole slice</td><td class="good">4,552</td></tr>
+                <tr><td>Share of returned files labelled as needed</td><td class="bad">33%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-note">Search's top 10 holds 59% of a feature's files and reading files until all are found costs a median 7,500 tokens.</p>
+        </div>
+
+        <div class="bench-table-card">
+          <h4>Scale: a generated 10,000-file Next.js + Prisma repo</h4>
+          <div class="cli-table-wrap">
+            <table class="cli-table data-table">
+              <thead><tr><th></th><th>1.4</th><th>2.0</th><th>Target</th></tr></thead>
+              <tbody>
+                <tr><td>Search, warm p50 / p95</td><td>2.1 s / 2.7 s</td><td class="good">43 / 50 ms</td><td>p95 &lt; 150 ms</td></tr>
+                <tr><td>Search right after editing a file</td><td>31 s</td><td class="good">38 ms</td><td></td></tr>
+                <tr><td><code>feature_slice</code>, warm</td><td>17 s</td><td class="good">88 ms</td><td></td></tr>
+                <tr><td><code>impact</code>, warm</td><td>26 s</td><td class="good">0.3 s</td><td></td></tr>
+                <tr><td>Index build / size</td><td>13 s / 41 MB</td><td>13 s / 24 MB</td><td>&lt; 60 s / &lt; 100 MB</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-note">Synthetic code measures speed and size only, not ranking quality.</p>
+        </div>
+
+        <div class="bench-table-card">
+          <h4>Tests to run, and routes that need auth</h4>
+          <div class="cli-table-wrap">
+            <table class="cli-table data-table">
+              <thead><tr><th></th><th>Codebase Trainer</th><th>grep</th></tr></thead>
+              <tbody>
+                <tr><td>Failing tests selected when each source file breaks (mutation, 44 files)</td><td class="good">220 / 220</td><td>—</td></tr>
+                <tr><td>Share of the test suite skipped per change</td><td class="good">60%</td><td>—</td></tr>
+                <tr><td>Failing tests found for 3 changes in this repo</td><td class="good">24 / 24</td><td>5 / 24</td></tr>
+                <tr><td>Routes with the right auth requirement (4 apps)</td><td class="good">57 / 57</td><td>—</td></tr>
+                <tr><td>Permission findings / false positives</td><td>1 / 0</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="table-note">The one permission finding is real: nestjs-realworld's <code>DELETE /api/users/:slug</code> has no guard.</p>
+        </div>
+      </div>
+
+      <div class="limits-card">
+        <h4>Where it is still weak</h4>
+        <ul>
+          <li><code>feature_slice</code> precision is 33% against the labels, below our 60% target, and tRPC monorepos (t3-turbo) score lowest.</li>
+          <li>Neural search doubles search time (90–160 ms on these repos) and the first embedding of a repo takes 20–70 s.</li>
+          <li>A one-shot CLI command that needs call edges on a 10,000-file repo still parses every file the first time (about 13 s); the MCP server does this in the background.</li>
+          <li>The permission rules about scopes are only tested on fixtures: none of the four apps uses scopes.</li>
+        </ul>
+        <p class="table-note">Reproduce with <code>npm run bench:setup &amp;&amp; npm run bench</code>. Results, labels and scripts are in <a href="https://github.com/om0852/codebase-trainer/tree/main/bench" target="_blank" rel="noopener">bench/</a>.</p>
+      </div>
+    
+      </section>
+      <section class="doc-section" id="upgrade">
+
+            <h2>Upgrading from 1.x</h2>
+            <ul class="setup-steps-list">
+              <li><strong>Node 22 or later</strong> is required.</li>
+              <li><strong>The index moves</strong> from <code>.codebase/embeddings.json</code> to <code>.codebase/index.sqlite</code> and is rebuilt automatically on first use.</li>
+              <li><strong>MCP tools have new names.</strong> The old names keep working through 2.x and log a deprecation note once per session.</li>
+            </ul>
+            <div class="cli-table-wrap">
+              <table class="cli-table">
+                <thead><tr><th>1.x tool</th><th>2.0 tool</th></tr></thead>
+                <tbody>
+                  <tr><td><code>search_codebase</code>, <code>search_global_workspace</code></td><td><code>search</code> (<code>scope: workspace</code>)</td></tr>
+                  <tr><td><code>trace_execution_flow</code></td><td><code>trace_flow</code></td></tr>
+                  <tr><td><code>impact_analysis</code>, <code>get_change_impact_analysis</code></td><td><code>impact</code></td></tr>
+                  <tr><td><code>check_diff_against_standards</code>, <code>generate_pr_review</code></td><td><code>review_diff</code> (<code>format: markdown</code>)</td></tr>
+                  <tr><td><code>get_microservice_api_routes</code>, <code>detect_api_drift</code>, <code>get_permission_map</code></td><td><code>api_map</code></td></tr>
+                  <tr><td><code>get_codebase_conventions</code>, <code>visualize_architecture</code>, <code>analyze_codebase_quality</code>, <code>get_model_health_status</code>, <code>generate_onboarding_guide</code></td><td><code>codebase_overview</code></td></tr>
+                  <tr><td><code>scan_security_vulnerabilities</code>, <code>scan_code_duplication</code>, <code>get_tech_debt_items</code></td><td><code>quality_scan</code></td></tr>
+                  <tr><td><code>get_context_pack</code></td><td>still available; <code>feature_slice</code> is the better choice</td></tr>
+                </tbody>
+              </table>
+            </div>
+      </section>
+      <section class="doc-section" id="faq">
+
+            <h2>Troubleshooting and FAQ</h2>
+            <div class="faq-list">
+              <div class="faq-item">
+                <h4>My editor says the MCP server failed to start</h4>
+                <p>Check <code>node --version</code> is 22 or later, and that <code>npx -y codebase-trainer mcp</code> starts in a terminal (it waits silently for input; press Ctrl+C). On Windows, if <code>npx</code> is not found by the editor, install globally and use <code>cb-trainer</code> with args <code>["mcp"]</code>.</p>
+              </div>
+              <div class="faq-item">
+                <h4>It indexed the wrong folder</h4>
+                <p>The server indexes the folder it is started in. Use a project-level config (<code>.mcp.json</code>, <code>.cursor/mcp.json</code>, <code>.vscode/mcp.json</code>) so your editor starts it in the repo, or run <code>setup</code> from the repo root.</p>
+              </div>
+              <div class="faq-item">
+                <h4>The first call is slow on a big repo</h4>
+                <p>The first index and the first call graph parse every file once (seconds on a 10,000-file repo). The server does this in the background right after it starts, and after that only changed files are processed.</p>
+              </div>
+              <div class="faq-item">
+                <h4>Does any code leave my machine?</h4>
+                <p>No. No tool makes network calls, and a test runs all eight with sockets, DNS and fetch disabled. The only download is the optional neural model, after you enable it.</p>
+              </div>
+              <div class="faq-item">
+                <h4>Results look out of date</h4>
+                <p>Changed files are re-indexed before every search, and the server watches the repo. If you set <code>CODEBASE_TRAINER_AUTO_REFRESH=0</code>, results from changed files are marked <code>stale</code>; run <code>cb-trainer update</code>. To start over, delete <code>.codebase/</code>.</p>
+              </div>
+              <div class="faq-item">
+                <h4>A finding is wrong</h4>
+                <p>Findings are static heuristics with evidence; check the evidence lines. For the permission map, add your own guard names under <code>auth.guards</code> and public routes under <code>auth.publicPaths</code> in <code>codebase-trainer.yaml</code>. Please report false positives on <a href="https://github.com/om0852/codebase-trainer/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+              </div>
+            </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <div class="container footer-wrapper">
+      <div class="footer-left">
+        <span class="brand-mark">CODEBASE</span>
+        <span class="brand-sub">TRAINER v2.0.0</span>
+        <p class="copyright">Open source under the MIT License.</p>
+      </div>
+      <div class="footer-nav">
+        <a href="./">HOME</a>
+        <a href="#quickstart">QUICK START</a>
+        <a href="#benchmark">BENCHMARK</a>
+        <a href="https://github.com/om0852/codebase-trainer" target="_blank" rel="noopener">GITHUB</a>
+        <a href="https://www.npmjs.com/package/codebase-trainer" target="_blank" rel="noopener">NPM</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/docs.js"></script>
+</body>
+</html>
