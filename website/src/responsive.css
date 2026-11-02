@@ -1,0 +1,123 @@
+/* ==========================================================================
+   Responsive layer for phones and tablets, loaded last on both pages.
+   Breakpoints: 1280 (docs content column), 1100 (tablet landscape), 900 (tablet portrait), 600 (phone), 380 (small phone)
+   ========================================================================== */
+
+/* Real phone browsers resize the viewport as the address bar moves; svh keeps the hero steady */
+.hero { min-height: 100vh; min-height: 100svh; }
+
+/* Comfortable tap targets everywhere */
+.brand-logo { padding: 0.35rem 0; }
+.text-link { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.25rem; }
+.copy-mini { min-height: 2rem; padding: 0.3rem 0.7rem; font-size: 0.7rem; }
+.nav-item { padding: 0.45rem 0; }
+
+/* No label smaller than ~11.5px */
+.brand-sub, .ask-label, .docs-nav-label { font-size: 0.72rem; }
+.slice-kicker, .row-layer, .slice-budget, .slice-response-bar { font-size: 0.72rem; }
+.row-why, .slice-meta span { font-size: 0.72rem; }
+
+/* --- Docs: the content column is narrower than the viewport, so the tool explorer stacks earlier --- */
+@media (max-width: 1280px) {
+  .doc-section .tools-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .doc-section .tools-sidebar {
+    flex-direction: row;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+  }
+  .doc-section .tool-nav-item { width: auto; flex: 0 0 auto; padding: 0.6rem 0.85rem; }
+  .doc-section .tool-detail-view { padding: 1.5rem; }
+}
+
+/* --- Tablet landscape and small laptops --- */
+@media (max-width: 1100px) {
+  .container { padding: 0 1.75rem; }
+  .stats-band, .flow-scene, .feature-scene, .terminal-scene, .proof-scene, .cta-scene { padding: 5.5rem 0; }
+  .scene-head { margin-bottom: 2.75rem; }
+
+  /* The request/response demo stacks before its columns get cramped */
+  .slice-demo { grid-template-columns: minmax(0, 1fr); max-width: 40rem; gap: 0; }
+  .slice-wire { width: 1px; height: 3rem; margin: 0.5rem 0 0.5rem 1.5rem; background: linear-gradient(180deg, var(--border-color), var(--border-bright)); }
+  .slice-wire span { left: -3px; }
+  .slice-demo.in .slice-wire span { animation-name: wire-down; }
+
+  .terminal-split { grid-template-columns: minmax(0, 1fr); gap: 2rem; max-width: 44rem; margin: 0 auto; }
+  .terminal-copy { text-align: center; }
+
+  /* Chips stay as quiet background on tablets */
+  .hero-chips { opacity: 0.55; }
+  .scroll-cue { display: none; }
+}
+
+@keyframes wire-down {
+  0% { top: 0; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: calc(100% - 7px); opacity: 0; }
+}
+
+/* --- Tablet portrait --- */
+@media (max-width: 900px) {
+  .hero { padding: 6.5rem 0 4rem; }
+  .hero-title { max-width: 12ch; }
+  .stats-grid { gap: 1.5rem; }
+  .feature-grid { gap: 0.9rem; }
+  .feature { padding: 1.4rem; }
+  .bars { gap: 1.4rem; }
+  .doc-section { padding: 2.5rem 0; }
+  .doc-section > h2 { font-size: 1.5rem; }
+  .docs-intro { padding-top: 1rem; }
+  .req-grid, .prompt-guide-grid { grid-template-columns: minmax(0, 1fr); }
+  .ide-tabs { gap: 0.4rem; }
+  .ide-tab { padding: 0.6rem 0.9rem; }
+}
+
+/* --- Phones --- */
+@media (max-width: 600px) {
+  .container { padding: 0 1.15rem; }
+  .navbar { padding: 0.75rem 0; }
+  .nav-wrapper { padding: 0 1.15rem; gap: 0.75rem; }
+  .nav-actions { gap: 0.5rem; }
+  .nav-actions .btn-white { padding: 0.55rem 0.8rem; }
+
+  /* The chips crowd the headline on a phone: keep the grid and glow only */
+  .hero-chips { display: none; }
+  .hero { padding: 6rem 0 3.5rem; }
+  .hero-sub { font-size: 1rem; }
+  .hero-cta { width: 100%; flex-direction: column; align-items: stretch; gap: 0.7rem; }
+  .hero-cta .command-widget { justify-content: space-between; }
+  .hero-cta .btn-outline { justify-content: center; }
+  .pill-badge { font-size: 0.68rem; text-align: center; }
+
+  .stats-band, .flow-scene, .feature-scene, .terminal-scene, .proof-scene, .cta-scene { padding: 4.25rem 0; }
+  .stats-band { padding: 3.25rem 0; }
+  .stat-label { font-size: 0.72rem; }
+
+  .slice-request { padding-left: 1.15rem; gap: 1.6rem; }
+  .slice-meta { gap: 1.25rem; }
+  .slice-meta strong { font-size: 1.7rem; }
+  .slice-rows li { padding: 0.8rem 0.95rem; }
+
+  .terminal-body { font-size: 0.72rem; padding: 0.95rem; min-height: 0; }
+
+  .bar span { font-size: 0.72rem; }
+
+  .docs-intro h1 { font-size: 1.9rem; }
+  .doc-section .tool-detail-view { padding: 1.15rem; }
+  .detail-header { flex-wrap: wrap; gap: 0.5rem; }
+  .ide-guide-card, .req-card, .pg-card { padding: 1.1rem; }
+  .config-meta span { font-size: 0.8rem; }
+  .footer { padding: 2.5rem 0; }
+}
+
+/* --- Small phones (320–380px) --- */
+@media (max-width: 380px) {
+  .hero-title { font-size: 2.3rem; }
+  .nav-actions .btn-white { display: none; }
+  .stats-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem 0.75rem; }
+  .stat-num { font-size: 2rem; }
+  .command-text { font-size: 0.78rem; }
+  .slice-ask { font-size: 1.15rem; }
+}

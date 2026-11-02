@@ -2,7 +2,7 @@
 
 > **Fast, local, zero-setup codebase index and context tools for AI coding agents.**
 >
-> **Website and docs:** https://om0852.github.io/codebase-trainer/
+> **Website and docs:** https://codebase-trainer.vercel.app/
 
 `codebase-trainer` (`cb-trainer`) gives AI coding agents (Claude Code, Cursor, and other MCP clients) a local map of a repository so they stop re-grepping it: code search, execution-flow traces, change impact, a diff checker, and conventions learned from the code, served over the **Model Context Protocol (MCP)** or the CLI. It runs fully offline with no API keys, vector database, or language servers.
 

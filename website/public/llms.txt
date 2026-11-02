@@ -15,14 +15,14 @@ The eight MCP tools: `search`, `feature_slice`, `trace_flow`, `impact`, `review_
 
 ## Docs
 
-- [Quick start](https://om0852.github.io/codebase-trainer/docs.html#quickstart): one command, restart the editor, ask.
-- [Connect your editor](https://om0852.github.io/codebase-trainer/docs.html#clients): config for Claude Code (.mcp.json), Cursor (.cursor/mcp.json), VS Code (.vscode/mcp.json) and Windsurf.
-- [The eight tools](https://om0852.github.io/codebase-trainer/docs.html#tools): what each returns, with real output.
-- [CLI reference](https://om0852.github.io/codebase-trainer/docs.html#cli): every `cb-trainer` command.
-- [Configuration](https://om0852.github.io/codebase-trainer/docs.html#config): `codebase-trainer.yaml`, environment variables, what is indexed.
-- [CI and code scanning](https://om0852.github.io/codebase-trainer/docs.html#ci): GitHub Action and SARIF output.
-- [Benchmark and limits](https://om0852.github.io/codebase-trainer/docs.html#benchmark): methodology, every number, and where it is weak.
-- [Troubleshooting](https://om0852.github.io/codebase-trainer/docs.html#faq)
+- [Quick start](https://codebase-trainer.vercel.app/docs.html#quickstart): one command, restart the editor, ask.
+- [Connect your editor](https://codebase-trainer.vercel.app/docs.html#clients): config for Claude Code (.mcp.json), Cursor (.cursor/mcp.json), VS Code (.vscode/mcp.json) and Windsurf.
+- [The eight tools](https://codebase-trainer.vercel.app/docs.html#tools): what each returns, with real output.
+- [CLI reference](https://codebase-trainer.vercel.app/docs.html#cli): every `cb-trainer` command.
+- [Configuration](https://codebase-trainer.vercel.app/docs.html#config): `codebase-trainer.yaml`, environment variables, what is indexed.
+- [CI and code scanning](https://codebase-trainer.vercel.app/docs.html#ci): GitHub Action and SARIF output.
+- [Benchmark and limits](https://codebase-trainer.vercel.app/docs.html#benchmark): methodology, every number, and where it is weak.
+- [Troubleshooting](https://codebase-trainer.vercel.app/docs.html#faq)
 
 ## Project
 
@@ -32,5 +32,5 @@ The eight MCP tools: `search`, `feature_slice`, `trace_flow`, `impact`, `review_
 
 ## Optional
 
-- [Full README as plain text](https://om0852.github.io/codebase-trainer/llms-full.txt)
+- [Full README as plain text](https://codebase-trainer.vercel.app/llms-full.txt)
 - [Implementation plan with measured results per phase](https://github.com/om0852/codebase-trainer/blob/main/docs/IMPLEMENTATION_PLAN.md)

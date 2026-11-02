@@ -33,4 +33,4 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://om0852.github.io/codebase-trainer/sitemap.xml
+Sitemap: https://codebase-trainer.vercel.app/sitemap.xml

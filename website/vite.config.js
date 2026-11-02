@@ -19,8 +19,8 @@ function llmsFull() {
   };
 }
 
-// Two pages (landing and docs). Relative asset paths, so the built site works at a project URL
-// (user.github.io/codebase-trainer/) and on a custom domain.
+// Two pages (landing and docs), deployed on Vercel. Relative asset paths keep the build portable
+// (any domain or sub-path).
 export default defineConfig({
   base: './',
   plugins: [llmsFull()],
