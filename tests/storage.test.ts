@@ -6,7 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { ChunkStores } from '../src/storage/chunkStore.js';
 import { SemanticSearchEngine } from '../src/semantic/searchEngine.js';
 import { ASTExtractor } from '../src/extractors/astExtractor.js';
-import { RepoWatch } from '../src/watcher/repoWatch.js';
+import { RepoWatch, WATCH_WARMUP_MS } from '../src/watcher/repoWatch.js';
 import { withFixture, writeFile } from './helpers.js';
 
 const files = {
@@ -76,6 +76,9 @@ test('watched repo: the patched file listing follows additions, edits and deleti
     assert.ok(RepoWatch.start(root));
     try {
       assert.deepEqual(listed(), ['src/billing.ts', 'src/keys.ts', 'src/nested/deep.ts']);
+      // Past the start-up window every check walks the repo; after it, changes are patched from watch events
+      await sleep(WATCH_WARMUP_MS + 200);
+      listed();
       writeFile(root, 'src/new.ts', 'export const added = 1;\n');
       writeFile(root, 'src/keys.ts', 'export const changed = 22;\n');
       fs.rmSync(path.join(root, 'src', 'nested'), { recursive: true });

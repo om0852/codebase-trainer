@@ -25,8 +25,9 @@ export interface SourceFileEntry {
   size: number;
 }
 
-// A full walk at least this often even while a watcher reports changes, in case it missed some
-const FULL_WALK_MS = 10 * 60 * 1000;
+// A full walk at least this often even while a watcher reports changes, so a missed event is stale for at most
+// a minute (a walk costs ~60 ms on 10,000 files)
+const FULL_WALK_MS = 60 * 1000;
 // Changes to these files can change which files are indexed
 const RULE_FILES = new Set(['.gitignore', '.codebaseignore', 'codebase-trainer.yaml', 'codebase-trainer.yml', '.git/info/exclude']);
 

@@ -12,7 +12,12 @@ interface WatchState {
   watcher: fs.FSWatcher;
   // Repo-relative paths changed since the last take, or 'all' when anything may have changed
   dirty: Set<string> | 'all';
+  startedAt: number;
 }
+
+// On macOS the recursive watch starts a moment after fs.watch() returns; changes in that gap are never reported,
+// so for this long after starting every check walks the repo
+export const WATCH_WARMUP_MS = 2000;
 
 // Generated state and VCS internals change constantly and are never indexed
 const IGNORED_PREFIXES = ['.codebase/', '.git/', 'node_modules/', '.codebase-neural-cache/'];
@@ -25,7 +30,7 @@ export class RepoWatch {
     const root = path.resolve(repoPath);
     if (this.states.has(root)) return true;
     try {
-      const state: WatchState = { watcher: null as unknown as fs.FSWatcher, dirty: 'all' };
+      const state: WatchState = { watcher: null as unknown as fs.FSWatcher, dirty: 'all', startedAt: Date.now() };
       // Watch the real path: macOS reports events against it (temp folders live under /var -> /private/var), and
       // file names relative to a symlinked path would not match the repo's files
       state.watcher = fs.watch(fs.realpathSync(root), { recursive: true, persistent: false }, (_event, filename) => {
@@ -80,6 +85,10 @@ export class RepoWatch {
   public static takeChanges(repoPath: string): Set<string> | 'all' | null {
     const state = this.states.get(path.resolve(repoPath));
     if (!state) return null;
+    if (Date.now() - state.startedAt < WATCH_WARMUP_MS) {
+      state.dirty = new Set();
+      return 'all';
+    }
     const dirty = state.dirty;
     state.dirty = new Set();
     return dirty;
