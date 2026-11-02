@@ -215,6 +215,36 @@ The check that would have caught the original `links:write` bug.
 
 **Done when:** a fixture reproducing the `links:write` scenario is flagged; false-positive rate measured on the benchmark repos and documented.
 
+**Status (done):** `src/security/permissionMap.ts` maps every route to `required` / `optional` / `none` with its scopes, roles and the evidence (`file:line`) for each guard.
+
+Guards are read from five places:
+- Express middleware arguments and `router.use(...)`
+- calls inside the handler (`requireScope('links:write')`, `verifyCurrentUserHasAccessToPost(id)`, `withScope(...)` wrappers, or a session read followed by a 401/403 or redirect)
+- NestJS `@UseGuards` / `@Roles` / `@Public` and module `consumer.apply(AuthMiddleware).forRoutes(...)`
+- Next.js `middleware.ts` matchers
+- tRPC procedure builders (whether `protectedProcedure` rejects anonymous callers is read from its definition)
+
+All three findings are implemented. The diff checker reports them as `permission-mismatch` when a diff touches a route handler. The map is exposed as `get_permission_map`, the `codebase://permissions` resource, a summary in `get_microservice_api_routes`, and `cb-trainer permissions`. Next.js handlers written as `export const DELETE = withScope(...)` are now recognised as routes.
+
+The `links:write` fixture is flagged as `method-scope-mismatch`:
+- **info** when no other route uses a separate delete scope
+- **warning** when other routes do (e.g. `keys:delete`)
+
+Results against hand labels (`bench/permissions.json`, `npm run bench:permissions`):
+
+| | Benchmark repos |
+|---|---|
+| Routes with the right auth requirement | 57 / 57 |
+| Findings | 1 (0 false positives) |
+| Real problem found | nestjs-realworld `DELETE /api/users/:slug` has no guard; any caller can delete any user |
+
+Limits:
+- **Small, easy sample.** The labels were written by the same author as the tool.
+- **Scope rules not exercised on real code.** None of these repos uses scopes, so only `route-without-auth` was tested here; the scope rules are covered by fixtures alone.
+- **Regex fallback.** It finds only 24 of the routes (multi-line Express and NestJS decorators need the syntax tree).
+- **Guards it can't see.** Guards applied where a router is mounted (`app.use('/admin', requireAdmin, router)`) and checks inside named handlers defined in other files.
+- **Not done:** an `auth` layer in `feature_slice`.
+
 ---
 
 ## 9. Phase 6 — Test impact and optional embeddings (weeks 12–14)

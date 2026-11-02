@@ -7,6 +7,7 @@ import { CallSiteExtractor } from '../flow/callSites.js';
 import { ConventionMiner } from '../miner/conventionMiner.js';
 import { IntentClassifier } from '../classifier/intentClassifier.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
+import { PermissionMapBuilder } from '../security/permissionMap.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ASTFact, CodebaseConvention } from '../types/index.js';
@@ -54,6 +55,7 @@ const CHECKS: DiffCheck[] = [
   { id: 'security-risk', description: 'Added eval/exec, SQL built by string concatenation, or disabled TLS verification.' },
   { id: 'removed-export-still-imported', description: 'Exports removed (or files deleted) by the diff that other files still import.' },
   { id: 'contract-drift', description: 'Client fetch/axios calls or route handlers added by the diff (outside tests) whose method, path or payload does not match the other side.' },
+  { id: 'permission-mismatch', description: 'Changed route handlers with no auth guard where sibling routes have one, deletes allowed by a scope that also grants editing, or read scopes guarding writes (heuristic permission map).' },
   { id: 'no-explicit-any', description: 'Added `any` types in TypeScript files when the codebase requires type annotations.' },
   { id: 'no-console-log', description: 'Added console.log in files that do not already log to the console (CLIs, tests and scripts are skipped).' },
   { id: 'sync-io-in-request-handler', description: 'Added synchronous fs/child_process calls in files that serve HTTP requests.' },
@@ -61,7 +63,7 @@ const CHECKS: DiffCheck[] = [
 ];
 
 const NOT_COVERED = [
-  'Authorization and permission logic, such as whether a scope or role grants more than its name implies',
+  'Authorization beyond the permission map: whether the user may act on this specific record, guards applied where a router is mounted, and permissions decided at runtime',
   'Business rules, data validation and error handling',
   'Runtime behaviour: performance, concurrency and resource leaks',
   'Whether the change is tested',
@@ -117,6 +119,7 @@ export class DiffChecker {
     files.forEach(file => findings.push(...this.checkLines(repoPath, file, conventions)));
     findings.push(...this.checkRemovedExports(repoPath, files));
     findings.push(...this.checkContractDrift(repoPath, files));
+    findings.push(...this.checkPermissions(repoPath, files));
 
     const unique = new Map<string, DiffFinding>();
     findings.forEach(f => unique.set(`${f.ruleId}|${f.filePath}|${f.line}|${f.message}`, f));
@@ -313,6 +316,31 @@ export class DiffChecker {
       });
     });
     return findings;
+  }
+
+  /**
+   * Permission-map findings on route handlers this diff changed.
+   */
+  private static checkPermissions(repoPath: string, files: DiffFile[]): DiffFinding[] {
+    const addedByFile = new Map<string, number[]>();
+    files.forEach(f => addedByFile.set(f.filePath, f.addedLines.map(l => l.line)));
+    const touchesCode = files.some(f => [...JS_TS_EXTENSIONS, '.py'].includes(path.extname(f.filePath).toLowerCase()) && f.addedLines.length > 0);
+    if (!touchesCode) return [];
+
+    const map = PermissionMapBuilder.build(repoPath);
+    return map.findings.flatMap(finding => {
+      const route = map.routes.find(r => r.filePath === finding.filePath && r.line === finding.line && r.method === finding.method);
+      const end = route?.endLine ?? finding.line;
+      const changed = (addedByFile.get(finding.filePath) ?? []).some(line => line >= finding.line && line <= end);
+      if (!changed || IntentClassifier.isTestFile(finding.filePath)) return [];
+      return [{
+        ruleId: 'permission-mismatch',
+        severity: finding.severity,
+        filePath: finding.filePath,
+        line: finding.line,
+        message: `${finding.message}${finding.evidence.length > 0 ? ` Compare: ${finding.evidence.slice(0, 2).join('; ')}.` : ''} (heuristic)`
+      }];
+    });
   }
 
   // Names exported by declarations or `export { a, b as c }` (without `from`) in a piece of source

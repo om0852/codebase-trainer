@@ -23,6 +23,7 @@ import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { ModelValidator } from '../validator/modelValidator.js';
 import { DocstringMiner } from '../miner/docstringMiner.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
+import { PermissionMapBuilder } from '../security/permissionMap.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { DiffChecker } from '../review/diffChecker.js';
 import { DuplicationScanner } from '../quality/duplicationScanner.js';
@@ -77,6 +78,12 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
           uri: 'codebase://graph/quality',
           name: 'Call Graph Quality & Sync I/O Alerts',
           description: 'Detected synchronous I/O in loops, high-complexity functions, and dead code warnings.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'codebase://permissions',
+          name: 'Route Permission Map',
+          description: 'Every route with its auth requirement, scopes and roles (with evidence), plus heuristic permission findings.',
           mimeType: 'application/json',
         },
         {
@@ -141,6 +148,19 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
             uri,
             mimeType: 'application/json',
             text: JSON.stringify(graph.qualityIssues, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (uri === 'codebase://permissions') {
+      const map = PermissionMapBuilder.build(repoPath);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(map, null, 2),
           },
         ],
       };
@@ -282,10 +302,23 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
         },
         {
           name: 'get_microservice_api_routes',
-          description: 'Extract exposed HTTP/REST API endpoints and consumed routes across microservices.',
+          description: 'Extract exposed HTTP/REST API endpoints and consumed routes across microservices, with a permission summary and findings.',
           inputSchema: {
             type: 'object',
             properties: {},
+          },
+        },
+        {
+          name: 'get_permission_map',
+          description: 'Route x method -> auth required/optional/none, scopes and roles, with file:line evidence (middleware, handler checks, decorators, NestJS module middleware, Next.js middleware matchers, tRPC procedures). Findings: route-without-auth (no guard while sibling routes have one), method-scope-mismatch (a delete allowed by a scope that also grants editing), scope-name-mismatch (a read scope guarding a write). Heuristic, not a security audit.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              findings_only: {
+                type: 'boolean',
+                description: 'Return only the summary and findings, not every route (default false).',
+              },
+            },
           },
         },
         {
@@ -525,11 +558,25 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
 
     if (name === 'get_microservice_api_routes') {
       const registry = RouteRegistryManager.extractServiceRoutes(repoPath);
+      const { summary, findings } = PermissionMapBuilder.build(repoPath);
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(registry, null, 2),
+            text: JSON.stringify({ ...registry, permissions: { summary, findings, detail: 'Call get_permission_map for every route with its guards.' } }, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (name === 'get_permission_map') {
+      const map = PermissionMapBuilder.build(repoPath);
+      const result = args?.findings_only ? { summary: map.summary, findings: map.findings, notes: map.notes } : map;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };

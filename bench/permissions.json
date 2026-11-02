@@ -1,0 +1,25 @@
+{
+  "description": "Hand-labelled auth for every route in the benchmark repos, read from each handler and its middleware. Routes not listed under none/optional require a signed-in user. findings lists the permission problems that are really there.",
+  "repos": {
+    "taxonomy": {
+      "none": ["GET /api/og", "POST /api/webhooks/stripe"],
+      "optional": [],
+      "findings": []
+    },
+    "express-realworld": {
+      "none": ["GET /", "POST /users", "POST /users/login"],
+      "optional": ["GET /articles", "GET /articles/:slug", "GET /articles/:slug/comments", "GET /profiles/:username", "GET /tags"],
+      "findings": []
+    },
+    "nestjs-realworld": {
+      "none": ["GET /api", "GET /api/articles", "GET /api/articles/:slug", "GET /api/articles/:slug/comments", "GET /api/profiles/:username", "GET /api/tags", "POST /api/users", "POST /api/users/login", "DELETE /api/users/:slug"],
+      "optional": [],
+      "findings": ["route-without-auth DELETE /api/users/:slug"]
+    },
+    "t3-turbo": {
+      "none": ["GET /api/auth/[...all]", "POST /api/auth/[...all]", "QUERY trpc:post.all", "QUERY trpc:post.byId"],
+      "optional": ["QUERY trpc:auth.getSession"],
+      "findings": []
+    }
+  }
+}

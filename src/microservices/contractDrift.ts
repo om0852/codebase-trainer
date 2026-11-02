@@ -237,13 +237,14 @@ export class ContractDriftDetector {
           });
         }
 
-        // Next.js App Router style: export async function POST(req) { const { ... } = await req.json() }
-        const nextMatch = line.match(/export\s+(?:async\s+)?function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(/i);
+        // Next.js App Router style: export async function POST(req) { ... }, or a wrapped handler
+        // such as export const DELETE = withScope('links:write', async (req) => { ... })
+        const nextMatch = line.match(/export\s+(?:(?:async\s+)?function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(|const\s+(GET|POST|PUT|DELETE|PATCH)\s*=)/);
         if (nextMatch) {
           const normRel = relPath.replace(/\\/g, '/');
           if (!normRel.includes('api/') && !normRel.includes('routes/')) return;
 
-          const method = nextMatch[1].toUpperCase();
+          const method = (nextMatch[1] ?? nextMatch[2]).toUpperCase();
           // Infer endpoint from folder path e.g., app/api/v1/domains/route.ts -> /api/v1/domains
           let endpoint = normRel;
           if (endpoint.includes('api/')) {

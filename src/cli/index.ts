@@ -26,6 +26,7 @@ import { RouteRegistryManager } from '../microservices/routeRegistry.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { ModelValidator } from '../validator/modelValidator.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
+import { PermissionMapBuilder } from '../security/permissionMap.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { CodebaseWatcher } from '../watcher/fileWatcher.js';
 import { TreeSitter } from '../parsing/treeSitter.js';
@@ -228,6 +229,41 @@ program
     registry.consumedRoutes.forEach(c => console.log(`   - ${c}`));
 
     console.log(`✨ Registry saved to: ${path.join(repoPath, '.codebase', 'api_registry.json')}`);
+  });
+
+program
+  .command('permissions')
+  .description('Route permission map: which routes require auth, their scopes and roles, and heuristic permission findings')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-f, --findings-only', 'Print only the findings')
+  .option('-j, --json', 'Output the permission map as raw JSON')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    const map = PermissionMapBuilder.build(repoPath);
+
+    if (options.json) {
+      console.log(JSON.stringify(map, null, 2));
+      return;
+    }
+
+    const { summary } = map;
+    console.log(`🔐 Permission map: ${summary.routes} route(s): ${summary.required} require auth, ${summary.optional} optional, ${summary.none} with no guard found`);
+    if (!options.findingsOnly) {
+      map.routes.forEach(r => {
+        const access = [...r.scopes, ...r.roles.map(role => `role:${role}`)].join(', ');
+        console.log(`  ${r.auth.padEnd(8)} ${r.method.padEnd(8)} ${r.endpoint}${access ? `  [${access}]` : ''}  (${r.filePath}:${r.line})`);
+      });
+    }
+    console.log(`
+Findings (${map.findings.length}):`);
+    if (map.findings.length === 0) console.log('  none');
+    map.findings.forEach(f => {
+      console.log(`  ${f.severity.toUpperCase()} ${f.rule} ${f.filePath}:${f.line}
+    ${f.message}`);
+      f.evidence.forEach(e => console.log(`      ${e}`));
+    });
+    map.notes.forEach(note => console.log(`
+Note: ${note}`));
   });
 
 program

@@ -19,6 +19,7 @@
     "bench": "tsx bench/run.ts",
     "bench:setup": "tsx bench/corpus.ts",
     "bench:links": "tsx bench/links.ts",
+    "bench:permissions": "tsx bench/permissions.ts",
     "security": "node dist/cli/index.js security",
     "audit": "node dist/cli/index.js audit",
     "ci": "node dist/cli/index.js ci",

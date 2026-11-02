@@ -38,6 +38,7 @@ Search takes 60–150 ms per query on these repos (100–170 files each). The 28
 
 1. **Feature slices (`cb-trainer slice`, MCP `feature_slice`)**: One call returns the files a feature spans, grouped by layer (UI, client, route, service, data model), each with the reason it was included, the call/request/data flows between them, and code packed to a token budget. On the benchmark's 24 feature questions it finds 83% of the labelled files in about 4,500 tokens; the top 10 search results find 59%.
 1. **Token-Budgeted Code Skeletons (`--max-tokens`)**: Compresses code into structural skeletons that keep classes, function signatures, interfaces and docstrings while replacing function bodies with placeholders.
+1. **Permission map (`cb-trainer permissions`, MCP `get_permission_map`)**: Every route's auth requirement, scopes and roles with `file:line` evidence, read from Express middleware, handler checks, NestJS guards and module middleware, Next.js `middleware.ts` and tRPC procedures. It flags writes with no guard next to guarded siblings, deletes allowed by a scope that also grants editing, and read scopes guarding writes; the diff checker runs the same checks on changed routes. Heuristic, not a security audit: on the benchmark repos it classified 57 of 57 routes correctly and found one real unguarded delete with no false positives.
 2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Parses frontend `fetch()` / `axios` calls and Express / Next.js route handlers, flagging method and payload mismatches, dead endpoints and orphan routes.
 3. **PageRank Graph Centrality (Aider style)**: Power-iteration PageRank over the resolved import graph, so central modules rank above one-off scripts.
 4. **Hybrid Local Search**: BM25 over stemmed tokens, combined with exact-symbol matches, a hashed character-trigram similarity score, and PageRank. The similarity score is lexical (it catches spelling and word-part overlap, not synonyms); there is no neural embedding model.
@@ -63,6 +64,9 @@ npx cb-trainer search "user authentication token"
 
 # 3. Detect Client ↔ Server API Contract Drift & Payload Mismatches
 npx cb-trainer drift
+
+# 3b. Which routes require auth, with which scopes and roles, and where that looks wrong
+npx cb-trainer permissions --findings-only
 
 # 4. Everything needed to change one feature, across layers, in one call
 npx cb-trainer slice "article comments" --budget 6000
