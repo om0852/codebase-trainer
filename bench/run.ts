@@ -15,6 +15,7 @@ import { BENCH_DIR, CorpusRepo, ensureRepo, loadCorpus } from './corpus.js';
  *
  *   tsx bench/run.ts [--split=dev|holdout|all] [--repos=a,b] [--label=1.4.0]
  *                    [--baseline=bench/baseline-dev.json] [--write-baseline]   (writes bench/baseline-<split>.json)
+ *                    [--embeddings=Xenova/all-MiniLM-L6-v2] [--neural-weight=1]   (fuse the optional neural model)
  */
 
 interface Question {
@@ -118,9 +119,14 @@ function loadQuestions(repo: CorpusRepo, split: string): Question[] {
   return (doc.questions || []).filter(q => split === 'all' || q.split === split);
 }
 
-function toolRanking(root: string, question: string): Ranking {
+async function toolRanking(root: string, question: string): Promise<Ranking> {
   const start = performance.now();
-  const hits = SemanticSearchEngine.search(root, question, RANK_DEPTH * 3);
+  const hits = args.embeddings
+    ? (await SemanticSearchEngine.searchWithStatusAsync(root, question, RANK_DEPTH * 3, {
+      model: args.embeddings,
+      neuralWeight: args['neural-weight'] ? Number(args['neural-weight']) : undefined
+    })).results
+    : SemanticSearchEngine.search(root, question, RANK_DEPTH * 3);
   const ms = performance.now() - start;
   const files: string[] = [];
   hits.forEach(h => {
@@ -190,7 +196,7 @@ function summarize(results: QuestionResult[]): MethodSummary {
   };
 }
 
-function benchRepo(repo: CorpusRepo, split: string): RepoReport | null {
+async function benchRepo(repo: CorpusRepo, split: string): Promise<RepoReport | null> {
   const questions = loadQuestions(repo, split);
   if (questions.length === 0) return null;
   const root = ensureRepo(repo);
@@ -216,18 +222,32 @@ function benchRepo(repo: CorpusRepo, split: string): RepoReport | null {
   const notIndexed = Array.from(new Set(questions.flatMap(q => q.files.filter(f => !indexed.has(f))))).sort();
 
   // Cold index build, measured from scratch
+  // (cached neural vectors survive it: they are keyed by chunk content, and re-embedding is slow)
+  const neuralDir = path.join(root, '.codebase', 'neural');
+  const neuralBackup = path.join(root, '.codebase-neural-cache');
+  if (fs.existsSync(neuralDir)) fs.renameSync(neuralDir, neuralBackup);
   fs.rmSync(path.join(root, '.codebase'), { recursive: true, force: true });
+  if (fs.existsSync(neuralBackup)) {
+    fs.mkdirSync(path.join(root, '.codebase'), { recursive: true });
+    fs.renameSync(neuralBackup, neuralDir);
+  }
   const buildStart = performance.now();
   SemanticSearchEngine.buildIndex(root);
   const buildMs = Math.round(performance.now() - buildStart);
   const bytes = fs.statSync(path.join(root, '.codebase', 'embeddings.json')).size;
+  if (args.embeddings) {
+    // Embed every chunk once up front, so per-question latency is the query, not the first-time vector build
+    const embedStart = performance.now();
+    await SemanticSearchEngine.searchWithStatusAsync(root, 'warm up', 1, { model: args.embeddings });
+    console.error(`  embedded ${repo.name} with ${args.embeddings} in ${Math.round(performance.now() - embedStart)} ms`);
+  }
 
   const tool: QuestionResult[] = [];
   const grep: QuestionResult[] = [];
   const slice: SliceResult[] = [];
   const latencies: number[] = [];
-  questions.forEach(q => {
-    const t = toolRanking(root, q.question);
+  for (const q of questions) {
+    const t = await toolRanking(root, q.question);
     latencies.push(t.ms);
     tool.push(scoreQuestion(q, t.files, fileTokens));
     grep.push(scoreQuestion(q, grepRanking(root, trackedFiles, contents, q.question).files, fileTokens));
@@ -244,7 +264,7 @@ function benchRepo(repo: CorpusRepo, split: string): RepoReport | null {
         files: inSlice.size
       });
     }
-  });
+  }
 
   return {
     files: indexed.size,
@@ -327,12 +347,12 @@ async function main() {
   const label = args.label || JSON.parse(fs.readFileSync(path.join(BENCH_DIR, '..', 'package.json'), 'utf8')).version;
 
   const repos: Record<string, RepoReport> = {};
-  loadCorpus().filter(r => !only || only.has(r.name)).forEach(repo => {
+  for (const repo of loadCorpus().filter(r => !only || only.has(r.name))) {
     console.error(`Benchmarking ${repo.name}...`);
-    const result = benchRepo(repo, split);
+    const result = await benchRepo(repo, split);
     if (result) repos[repo.name] = result;
     else console.error(`  no ${split} questions in bench/questions/${repo.name}.yaml, skipped`);
-  });
+  }
   if (Object.keys(repos).length === 0) throw new Error('No questions found; add bench/questions/<repo>.yaml files.');
 
   const all = Object.values(repos);

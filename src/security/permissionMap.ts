@@ -3,6 +3,7 @@ import { ASTExtractor } from '../extractors/astExtractor.js';
 import { extractCodeFacts, SymbolFact } from '../parsing/codeFacts.js';
 import { buildRepoIndex } from '../flow/adapters.js';
 import { ContractDriftDetector, ServerEndpoint } from '../microservices/contractDrift.js';
+import { ProjectConfigLoader } from '../config/projectConfig.js';
 
 /**
  * Permission map: for every route, whether it requires a signed-in user and which scopes or roles it checks,
@@ -78,7 +79,14 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE', 'MUTATION'])
 interface Call { name: string; args: string; line: number }
 
 export class PermissionMapBuilder {
+  // Project-specific guard names and public paths from codebase-trainer.yaml (`auth.guards`, `auth.publicPaths`)
+  private static customGuards = new Set<string>();
+  private static customPublic: RegExp[] = [];
+
   public static build(repoPath: string): PermissionMap {
+    const { auth } = ProjectConfigLoader.load(repoPath);
+    this.customGuards = new Set(auth.guards);
+    this.customPublic = auth.publicPaths.map(p => ProjectConfigLoader.globToRegExp(p.replace(/^\//, '')));
     const facts = ASTExtractor.scanDirectory(repoPath);
     const toRel = (f: string) => path.relative(repoPath, f).replace(/\\/g, '/');
     const read = (f: string) => ASTExtractor.readSourceFile(f) ?? '';
@@ -193,9 +201,20 @@ export class PermissionMapBuilder {
     return (meaningful[0] ?? '/').replace(/([^s])s$/, '$1');
   }
 
+  /**
+   * Middleware or decorator names that mean auth (or, with `customOnly`, only the project's own guard names from
+   * codebase-trainer.yaml, for handler calls that the built-in GUARD_CALL pattern does not cover).
+   */
+  private static isGuardName(name: string, customOnly = false): boolean {
+    const last = name.split('.').pop() ?? name;
+    if (this.customGuards.has(name) || this.customGuards.has(last)) return true;
+    return !customOnly && AUTH_NAME.test(name);
+  }
+
   /** Sign-in, webhooks, health checks, and sign-up (`POST /users`) are public by design. */
   private static isPublicByDesign(route: RoutePermission): boolean {
     if (PUBLIC_PATH.test(route.endpoint)) return true;
+    if (this.customPublic.some(re => re.test(route.endpoint.replace(/^\//, '')))) return true;
     return route.method === 'POST' && /\/(?:users|accounts|members|signup)$/i.test(ContractDriftDetector.normalizePath(route.endpoint));
   }
 
@@ -220,7 +239,7 @@ export class PermissionMapBuilder {
       const names = expression.replace(/^\[|\]$/g, '').split(',').map(s => s.trim()).filter(Boolean);
       names.forEach(name => {
         const callee = name.split('(')[0];
-        if (!AUTH_NAME.test(callee)) return;
+        if (!this.isGuardName(callee)) return;
         this.addGuard(route, { kind: 'middleware', name, filePath: rel, line }, OPTIONAL_NAME.test(callee) ? 'optional' : 'required');
         this.collectScopes(route, callee, name.slice(callee.length));
       });
@@ -233,7 +252,7 @@ export class PermissionMapBuilder {
     lines.forEach((text, idx) => {
       const use = text.match(/\b(?:router|app|server|\w+Router)\.use\(\s*([^'"`\s][^)]*)\)/);
       if (!use) return;
-      use[1].split(',').map(s => s.trim()).filter(name => AUTH_NAME.test(name.split('(')[0]))
+      use[1].split(',').map(s => s.trim()).filter(name => this.isGuardName(name.split('(')[0]))
         .forEach(name => guards.push({ kind: 'middleware', name, filePath: rel, line: idx + 1 }));
     });
     return guards;
@@ -260,7 +279,7 @@ export class PermissionMapBuilder {
   private static handlerChecks(route: RoutePermission, body: string, rel: string, startLine: number): void {
     const code = this.stripComments(body);
     this.callsIn(code).forEach(call => {
-      if (!GUARD_CALL.test(call.name)) return;
+      if (!GUARD_CALL.test(call.name) && !this.isGuardName(call.name, true)) return;
       this.addGuard(route, { kind: 'handler-check', name: `${call.name}(${call.args.slice(0, 60)})`, filePath: rel, line: startLine + call.line }, OPTIONAL_NAME.test(call.name) ? 'optional' : 'required');
       this.collectScopes(route, call.name, call.args);
     });
@@ -293,7 +312,7 @@ export class PermissionMapBuilder {
       const content = read(fact.filePath);
       if (!content.includes('.forRoutes(')) return;
       for (const m of content.matchAll(/\.apply\(([^)]*)\)\s*(?:\.exclude\([\s\S]*?\)\s*)?\.forRoutes\(([\s\S]*?)\)\s*;/g)) {
-        const middleware = m[1].split(',').map(s => s.trim()).filter(name => AUTH_NAME.test(name));
+        const middleware = m[1].split(',').map(s => s.trim()).filter(name => this.isGuardName(name));
         if (middleware.length === 0) continue;
         const line = content.slice(0, m.index).split('\n').length;
         const evidence: GuardEvidence = { kind: 'module-middleware', name: middleware.join(', '), filePath: toRel(fact.filePath), line };

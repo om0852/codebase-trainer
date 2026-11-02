@@ -253,6 +253,28 @@ Limits:
 
 Given a target or a diff: tests that import the changed code (transitively), plus tests whose names mention changed symbols; output a ready-to-run command (`npx vitest run a.test.ts b.test.ts`) for detected runners (vitest, jest, node:test, pytest).
 
+**Status (test impact done):** `src/graph/testImpact.ts` selects tests for a list of files or symbols, or for a diff. A test is selected for one of three reasons:
+- it is the changed file;
+- it imports the change, directly or through other modules and test helpers (with the import chain given as the reason);
+- it names a changed file or exported symbol, which catches tests that reach the code only at runtime.
+
+It groups the tests by package and runner and gives a ready-to-run command for each: vitest, jest, node:test (plain or via tsx), mocha, playwright or pytest, with `cd <package>` in monorepos. It is exposed in three places:
+- a `tests` field on `impact_analysis` / `cb-trainer impact`;
+- `testsToRun` on `check_diff_against_standards` / `cb-trainer review`;
+- `cb-trainer tests [targets...] [--base] [--commands]`, which by default uses the working-tree diff.
+
+Measured by mutation on this repo (`npm run bench:test-impact`): each of 44 source files was made to throw on load, and the whole suite was run each time.
+
+| | |
+|---|---|
+| Failing tests selected (recall) | **220 / 220 (100%)** |
+| Test files selected per change | 5.5 of 14 on average (about 60% of the suite skipped) |
+
+Limits:
+- **Over-selection.** It comes from type-only imports, as in `src/types/index.ts`. Those modules are erased at runtime, but a change there can still break type-checking, so selecting their tests is the conservative choice.
+- **What load failures don't show.** They break every test that reaches the file, so this measures recall and reduction, not precision for behaviour changes.
+- **Only one repo measured.** The benchmark repos' suites need their own dependencies installed, so their selections were spot-checked by hand rather than run.
+
 ### Optional neural embeddings
 
 - `@huggingface/transformers` as an **optional** dependency; a small code-capable model (~25–35 MB, quantized ONNX) downloaded on first opt-in and cached.
@@ -260,6 +282,34 @@ Given a target or a diff: tests that import the changed code (transitively), plu
 - Default stays zero-setup lexical search. README states plainly which mode is active.
 
 **Done when:** embeddings mode shows a measured recall@5 gain on `locate` questions; without opt-in, nothing is downloaded.
+
+**Status (done):** `src/semantic/neuralEmbeddings.ts`.
+
+How it works:
+- Off by default. A repo opts in with `cb-trainer embeddings enable` (or `init --embeddings`), or with `embeddings:` in `codebase-trainer.yaml`. `CODEBASE_TRAINER_EMBEDDINGS=0` turns it off.
+- `@huggingface/transformers` 4.3.1 is an **optional peer dependency**, not an `optionalDependency`. npm installs optional dependencies by default, which would have added about 300 MB of ONNX runtime to every install. It is loaded by name at runtime, so builds and CI don't need it.
+- The model is a quantized ONNX file, downloaded once into `~/.cache/codebase-trainer/models` and run on the CPU.
+- Chunk vectors are stored in `.codebase/neural/` keyed by content hash, so only new or edited chunks are re-embedded. They go there, not into SQLite, because Phase 2 isn't done.
+- Search fuses the lexical ranking and the neural ranking with real reciprocal rank fusion (k = 60, neural weight 0.5), then applies the code-over-docs kind weights.
+- If the model can't load, or the index is encrypted (vectors would be stored unencrypted), search falls back to lexical and says why.
+
+Model and weight were chosen on the dev split: MiniLM-L6 (23 MB), bge-small (34 MB), arctic-embed-xs (23 MB), jina-v2-small (32 MB), at weights 0.35, 0.5, 0.75 and 1.
+
+| MiniLM-L6, weight 0.5 | dev: lexical → fused | holdout: lexical → fused | all 104: lexical → fused |
+|---|---|---|---|
+| Locate hit@5 | 82% → **95%** | 90% → 90% | 84% → **94%** |
+| Locate hit@1 | 58% → 60% | 65% → 65% | 60% → 61% |
+| Locate MRR | 0.69 → **0.74** | 0.75 → 0.77 | 0.71 → **0.75** |
+| Feature recall@10 | 59% → **65%** | 60% → **66%** | 59% → **65%** |
+
+The other three models scored 0.72–0.73 MRR on dev. On holdout, hit@5 doesn't improve: those 28 questions were already at 90%. MRR and feature recall do improve there.
+
+Costs:
+- Search latency roughly doubles, from 45–70 ms to 90–160 ms per query.
+- First-time embedding takes 20–70 s per benchmark repo on this laptop's CPU.
+- `feature_slice` still seeds from lexical search.
+
+Tests stub the model, so they cover opt-in, caching, fusion and fallback without downloading anything.
 
 ---
 
@@ -308,6 +358,27 @@ Old names stay as deprecated aliases through 2.x, logged once per session.
 
 - Docs site pages: quick start, how it works (honest limits), tool reference with example outputs, benchmark results with methodology.
 - Launch with the benchmark table, including categories where we lose.
+
+**Status (core done):**
+
+- **10.1 Tool surface.** 20 tools became the eight above (`src/mcp/tools.ts`). Every 1.x name still works through an alias that logs one deprecation note per session. `get_context_pack` keeps its own output for existing prompts.
+- **10.2 Token budgets.**
+  - Every tool takes `budget_tokens` (default 8,000, or `budgets.defaultTokens`) and reports `budget.tokens`.
+  - Over budget, the costliest lists are cut from the end and listed under `budget.omitted`.
+  - `search` takes `detail: refs | snippets`.
+  - `feature_slice` keeps its own packing.
+  - Not done: stable symbol IDs for follow-up requests.
+- **10.3 Setup and config.**
+  - `cb-trainer setup` registers the server for each detected client: Claude Code `.mcp.json`, Cursor `.cursor/mcp.json`, VS Code `.vscode/mcp.json`, and Windsurf's per-user file only when named.
+  - It merges into existing files without touching other servers and skips files it can't parse. `--dry-run` shows what it would write. It then builds the first index and prints prompts to try.
+  - Shared settings live in `codebase-trainer.yaml` at the repo root rather than `.codebase/config.yaml`, because `.codebase/` is usually gitignored; the old path is still read. Settings: `exclude` globs, `embeddings`, `auth.guards` / `auth.publicPaths` for the permission map, and `budgets`. Unknown or invalid settings produce warnings, not errors.
+- **10.4 Enterprise.**
+  - `tests/offline.test.ts` runs all eight tools with sockets, DNS and fetch stubbed to fail, and asserts no attempt was made.
+  - `cb-trainer review --format sarif --output f.sarif` is available.
+  - `action.yml` now runs the published package through `npx` (it used to call `dist/`, which only exists in this repo), takes `base`, writes SARIF, and passes inputs through environment variables so they can't inject shell.
+  - There is no telemetry.
+  - Not done: 50k-file scale (needs Phase 2), SBOM and signed tags, and a `v1` tag for the action (the README's usage line assumes one).
+- **10.5 Docs.** The README covers setup, the tool table, the config file and CI. Not done: a docs site and the launch.
 
 ---
 

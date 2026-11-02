@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { ProjectConfigLoader } from '../config/projectConfig.js';
 
 const DEFAULT_IGNORED_FILES = [
   '.env',
@@ -67,6 +68,7 @@ export class CodebaseIgnore {
     const rel = path.relative(repoPath, filePath).replace(/\\/g, '/');
     const baseName = path.basename(filePath);
     const patterns = this.loadIgnorePatterns(repoPath);
+    if (ProjectConfigLoader.isExcluded(repoPath, rel)) return true;
 
     return patterns.some(pattern => {
       if (pattern.startsWith('*.')) {

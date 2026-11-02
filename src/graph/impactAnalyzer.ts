@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ImportResolver } from './importResolver.js';
+import { AffectedTest, TestCommand, TestImpactAnalyzer } from './testImpact.js';
 
 export interface ImpactAnalysisResult {
   target: string;
@@ -8,6 +9,8 @@ export interface ImpactAnalysisResult {
   transitiveDependents: string[];
   affectedRoutes: string[];
   breakingRiskWarning: string[];
+  // Tests to run after the change, with a command per detected runner
+  tests: { files: AffectedTest[]; commands: TestCommand[]; totalTests: number };
 }
 
 export class ImpactAnalyzer {
@@ -95,12 +98,14 @@ export class ImpactAnalyzer {
       breakingRiskWarning.push(`No direct import dependencies found for \`${targetSymbolName}\`. Changes appear isolated.`);
     }
 
+    const testImpact = TestImpactAnalyzer.forTargets(repoPath, [targetFileOrSymbol]);
     return {
       target: targetFileOrSymbol,
       directDependents: Array.from(directDependents),
       transitiveDependents: Array.from(transitiveDependents),
       affectedRoutes: Array.from(affectedRoutes),
-      breakingRiskWarning
+      breakingRiskWarning,
+      tests: { files: testImpact.tests, commands: testImpact.commands, totalTests: testImpact.totalTests }
     };
   }
 }

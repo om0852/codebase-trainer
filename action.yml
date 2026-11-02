@@ -1,52 +1,61 @@
-name: 'Codebase Intelligence & PR Review'
-description: 'Fast local codebase intelligence indexer, API contract drift detector, and AST convention enforcer'
-author: 'Antigravity Engineering'
+name: 'codebase-trainer review'
+description: 'Offline diff review for pull requests: secrets, security risks, removed exports still imported, API contract drift and permission mismatches, as SARIF for Code Scanning'
+author: 'codebase-trainer maintainers'
 branding:
   icon: 'cpu'
   color: 'blue'
 
+# Usage (checkout with history so the base ref exists):
+#   - uses: actions/checkout@v4
+#     with: { fetch-depth: 0 }
+#   - uses: actions/setup-node@v4
+#     with: { node-version: 22 }
+#   - uses: om0852/codebase-trainer@v1
+#     with: { base: origin/${{ github.base_ref }} }
+#   - uses: github/codeql-action/upload-sarif@v3
+#     with: { sarif_file: codebase-trainer.sarif }
+
 inputs:
   target-dir:
-    description: 'Path to target repository root'
+    description: 'Path to the repository root'
     required: false
     default: '.'
-  check-drift:
-    description: 'Enforce client-to-server API contract drift validation'
+  base:
+    description: 'Git ref to compare against (e.g. origin/main); defaults to HEAD, i.e. uncommitted changes'
+    required: false
+    default: ''
+  sarif-output:
+    description: 'Where to write the SARIF report'
+    required: false
+    default: 'codebase-trainer.sarif'
+  fail-on-error:
+    description: 'Fail the step when the review has error-severity findings'
     required: false
     default: 'true'
-  sarif-output:
-    description: 'Path to output SARIF report for GitHub Code Scanning'
+  version:
+    description: 'codebase-trainer version from npm'
     required: false
-    default: '.codebase/results.sarif'
-  token-budget:
-    description: 'Context pack max token budget for AI agent workflows'
-    required: false
-    default: '2000'
+    default: 'latest'
 
 runs:
   using: 'composite'
   steps:
-    - name: Run Codebase Index & AST Convention Mining
+    - name: Review the diff
       shell: bash
+      env:
+        CB_DIR: ${{ inputs.target-dir }}
+        CB_BASE: ${{ inputs.base }}
+        CB_SARIF: ${{ inputs.sarif-output }}
+        CB_FAIL: ${{ inputs.fail-on-error }}
+        CB_VERSION: ${{ inputs.version }}
       run: |
-        echo "🔍 Indexing Codebase Architecture & AST Facts..."
-        node dist/cli/index.js init -d "${{ inputs.target-dir }}"
-
-    - name: Check Client-to-Server API Contract Drift
-      if: ${{ inputs.check-drift == 'true' }}
-      shell: bash
-      run: |
-        echo "📡 Checking Client ↔ Server API Contract Drift..."
-        node dist/cli/index.js drift -d "${{ inputs.target-dir }}"
-
-    - name: Generate SARIF Security & Quality Audit Report
-      shell: bash
-      run: |
-        echo "🛡️ Exporting SARIF Static Analysis Report..."
-        node dist/cli/index.js ci -d "${{ inputs.target-dir }}"
-
-    - name: Audit Call Graph & Circular Dependencies
-      shell: bash
-      run: |
-        echo "⚠️ Auditing Circular Dependencies & Hotpath Sync I/O..."
-        node dist/cli/index.js audit -d "${{ inputs.target-dir }}"
+        args=(review -d "$CB_DIR" --format sarif --output "$CB_SARIF")
+        if [ -n "$CB_BASE" ]; then args+=(--base "$CB_BASE"); fi
+        set +e
+        npx -y "codebase-trainer@$CB_VERSION" "${args[@]}"
+        status=$?
+        set -e
+        if [ "$status" -ne 0 ] && [ "$CB_FAIL" = "true" ]; then
+          echo "::error::codebase-trainer review found error-severity findings (see $CB_SARIF)"
+          exit "$status"
+        fi

@@ -8,6 +8,7 @@ import { ConventionMiner } from '../miner/conventionMiner.js';
 import { IntentClassifier } from '../classifier/intentClassifier.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { PermissionMapBuilder } from '../security/permissionMap.js';
+import { AffectedTest, TestCommand, TestImpactAnalyzer } from '../graph/testImpact.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
 import { VulnerabilityScanner } from '../security/vulnerabilityScanner.js';
 import { ASTFact, CodebaseConvention } from '../types/index.js';
@@ -40,6 +41,8 @@ export interface DiffCheckReport {
   findings: DiffFinding[];
   summary: string;
   notCovered: string[];
+  // Tests that import or name the changed code, with a command per detected runner
+  testsToRun?: { tests: AffectedTest[]; commands: TestCommand[]; totalTests: number };
   error?: string;
 }
 
@@ -134,7 +137,11 @@ export class DiffChecker {
     const summary = sorted.length === 0
       ? `No findings from ${CHECKS.length} static checks across ${scope}. This is not a full review; see notCovered.`
       : `${errors} error(s), ${warnings} warning(s), ${infos} info across ${scope}.`;
-    return this.report(errors > 0 ? 'failed' : 'passed', source, files.map(f => f.filePath), addedLines, sorted, summary);
+    const testImpact = TestImpactAnalyzer.forChangedFiles(repoPath, files);
+    return {
+      ...this.report(errors > 0 ? 'failed' : 'passed', source, files.map(f => f.filePath), addedLines, sorted, summary),
+      testsToRun: { tests: testImpact.tests, commands: testImpact.commands, totalTests: testImpact.totalTests }
+    };
   }
 
   public static readGitDiff(repoPath: string, base?: string): { diff: string; untracked: string[]; source: string; error?: string } {

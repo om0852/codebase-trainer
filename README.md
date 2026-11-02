@@ -38,6 +38,8 @@ Search takes 60–150 ms per query on these repos (100–170 files each). The 28
 
 1. **Feature slices (`cb-trainer slice`, MCP `feature_slice`)**: One call returns the files a feature spans, grouped by layer (UI, client, route, service, data model), each with the reason it was included, the call/request/data flows between them, and code packed to a token budget. On the benchmark's 24 feature questions it finds 83% of the labelled files in about 4,500 tokens; the top 10 search results find 59%.
 1. **Token-Budgeted Code Skeletons (`--max-tokens`)**: Compresses code into structural skeletons that keep classes, function signatures, interfaces and docstrings while replacing function bodies with placeholders.
+1. **Optional neural search (`cb-trainer embeddings enable`)**: Downloads a small local model (MiniLM-L6, 23 MB, runs on the CPU, nothing leaves your machine) and fuses its ranking with keyword search. On the benchmark's 104 questions, the right file is in the top 5 for 94% of questions instead of 84%, and 65% of a feature's files are in the top 10 instead of 59%; searches take about twice as long. Needs `npm install @huggingface/transformers`; off unless you enable it.
+1. **Test impact (`cb-trainer tests`)**: The tests a change affects, meaning those that import it directly or through other modules and helpers, or that name it, each with a ready-to-run command for its runner (vitest, jest, node:test, mocha, playwright, pytest; per package in monorepos). Also returned by impact analysis and the diff checker. When each source file of this repo was made to fail, every failing test was selected, while 60% of the suite was skipped on average.
 1. **Permission map (`cb-trainer permissions`, MCP `get_permission_map`)**: Every route's auth requirement, scopes and roles with `file:line` evidence, read from Express middleware, handler checks, NestJS guards and module middleware, Next.js `middleware.ts` and tRPC procedures. It flags writes with no guard next to guarded siblings, deletes allowed by a scope that also grants editing, and read scopes guarding writes; the diff checker runs the same checks on changed routes. Heuristic, not a security audit: on the benchmark repos it classified 57 of 57 routes correctly and found one real unguarded delete with no false positives.
 2. **Client ↔ Server API Contract Drift Detector (`cb-trainer drift`)**: Parses frontend `fetch()` / `axios` calls and Express / Next.js route handlers, flagging method and payload mismatches, dead endpoints and orphan routes.
 3. **PageRank Graph Centrality (Aider style)**: Power-iteration PageRank over the resolved import graph, so central modules rank above one-off scripts.
@@ -49,7 +51,7 @@ Search takes 60–150 ms per query on these repos (100–170 files each). The 28
    - `codebase://drift`: Live client-to-server API contract drift status.
    - `codebase://graph/circular`: Real-time circular import warnings.
    - `codebase://graph/quality`: Call graph sync I/O alerts and hotspots.
-7. **Official GitHub Action (`action.yml`)**: Pre-built GitHub Action for CI/CD pipelines to run contract drift checks, convention checks, and export SARIF static analysis reports to GitHub Code Scanning.
+7. **GitHub Action (`action.yml`)**: Reviews a pull request's diff with the published package and writes SARIF for GitHub Code Scanning (see below).
 
 ---
 
@@ -76,6 +78,9 @@ npx cb-trainer context "user login authentication" --max-tokens 1500
 
 # 5. Trace End-to-End Execution Sequence Flow (Mermaid Sequence)
 npx cb-trainer flow "user checkout order"
+
+# 5b. Which tests to run for your working-tree changes (prints e.g. npx vitest run a.test.ts b.test.ts)
+npx cb-trainer tests --commands
 
 # 6. Check Downstream Breaking Change Impact
 npx cb-trainer impact src/routes/user.ts
@@ -112,18 +117,66 @@ npx cb-trainer mcp
 
 ## 🔌 Connecting to AI IDEs via MCP
 
-Add the following to your MCP client config (e.g. `mcp_config.json` in Cursor, Claude Code, or Antigravity):
+Run this in your repo:
+
+```bash
+npx codebase-trainer setup
+```
+
+It adds the server to the project config of each client it finds (`.mcp.json` for Claude Code, `.cursor/mcp.json`, `.vscode/mcp.json`; Windsurf's per-user file only with `--client windsurf`), keeps any other servers in those files, and builds the first index. Commit the config files so your team gets the same setup. `--dry-run` shows what it would write. To add it by hand:
 
 ```json
 {
   "mcpServers": {
-    "codebase-trainer": {
-      "command": "node",
-      "args": ["/path/to/codebase-trainer/dist/cli/index.js", "mcp"]
-    }
+    "codebase-trainer": { "command": "npx", "args": ["-y", "codebase-trainer", "mcp"] }
   }
 }
 ```
+
+### Tools
+
+| Tool | What it answers |
+|---|---|
+| `search` | Where is X? Ranked snippets with `file:line`, code before tests and docs. `scope: workspace` searches sibling repos; `detail: refs` returns locations only. |
+| `feature_slice` | Everything a feature touches, from UI to data model, with why each file is included, packed to a token budget. |
+| `trace_flow` | How a feature runs: entry point, then calls, requests and data access in order, each with evidence. |
+| `impact` | What depends on this file or symbol, and which tests to run (with the command). |
+| `review_diff` | What is wrong with this diff: secrets, security risks, broken imports, API drift, permission mismatches, conventions. `format: json | markdown | sarif`. |
+| `api_map` | Routes served and called, client/server drift, and the permission map. |
+| `codebase_overview` | Conventions with evidence, module diagram and cycles, hotspots, index health; `section: onboarding` writes a guide. |
+| `quality_scan` | Secrets and risky code, duplicated blocks, TODO/FIXME debt, import cycles. |
+
+Every tool accepts `budget_tokens` (default 8,000) and reports `budget.tokens` and anything it cut under `budget.omitted`. The 1.x tool names (`search_codebase`, `check_diff_against_standards`, ...) still work and log a deprecation note once per session.
+
+**Offline:** no tool makes network calls (a test enforces this). The only download is the optional neural model, after `cb-trainer embeddings enable`.
+
+### Shared settings: `codebase-trainer.yaml`
+
+Optional, at the repo root, meant to be committed:
+
+```yaml
+exclude: ["generated/**", "**/*.snap"]   # on top of .gitignore and .codebaseignore
+embeddings: false                         # or { enabled: true, model: Xenova/all-MiniLM-L6-v2 }
+auth:
+  guards: [ensureTeamMember]              # your own auth middleware names, for the permission map
+  publicPaths: ["/api/status"]            # routes that are public by design
+budgets: { defaultTokens: 8000, featureSliceTokens: 6000 }
+```
+
+Unknown or malformed settings are ignored and reported by `codebase_overview`.
+
+### CI: review pull requests with Code Scanning
+
+```yaml
+- uses: actions/checkout@v4
+  with: { fetch-depth: 0 }
+- uses: om0852/codebase-trainer@v1
+  with: { base: "origin/${{ github.base_ref }}" }
+- uses: github/codeql-action/upload-sarif@v3
+  with: { sarif_file: codebase-trainer.sarif }
+```
+
+Or directly: `npx codebase-trainer review --base origin/main --format sarif --output review.sarif`.
 
 ### Index freshness
 

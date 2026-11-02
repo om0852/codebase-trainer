@@ -20,6 +20,7 @@
     "bench:setup": "tsx bench/corpus.ts",
     "bench:links": "tsx bench/links.ts",
     "bench:permissions": "tsx bench/permissions.ts",
+    "bench:test-impact": "tsx bench/test-impact.ts",
     "security": "node dist/cli/index.js security",
     "audit": "node dist/cli/index.js audit",
     "ci": "node dist/cli/index.js ci",
@@ -52,5 +53,13 @@
     "@types/node": "^26.6.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": "^4.3.1"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
   }
 }

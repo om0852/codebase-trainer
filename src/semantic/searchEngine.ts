@@ -8,6 +8,7 @@ import { IndexStore } from '../storage/db.js';
 import { PageRankCalculator, PageRankResult } from '../graph/pageRank.js';
 import { DenseVectorEngine } from './denseVectorEngine.js';
 import { TextNormalizer, TOKENIZER_VERSION } from './textNormalizer.js';
+import { NeuralEmbeddings } from './neuralEmbeddings.js';
 import { TreeSitter } from '../parsing/treeSitter.js';
 import { extractCodeFacts, SymbolFact } from '../parsing/codeFacts.js';
 
@@ -41,10 +42,12 @@ export interface SearchResult {
   snippet: string;
   score: number;
   kind: ChunkKind;
-  matchType?: 'ast-symbol' | 'semantic-bm25' | 'hybrid';
+  matchType?: 'ast-symbol' | 'semantic-bm25' | 'hybrid' | 'neural';
   matchedSymbol?: string;
   pageRankScore?: number;
   denseSimilarity?: number;
+  // Cosine similarity from the optional neural model
+  neuralSimilarity?: number;
   // File changed on disk since it was indexed and was not refreshed (auto-refresh disabled)
   stale?: boolean;
 }
@@ -80,6 +83,17 @@ export interface IndexFreshness {
   staleFiles: string[];
   error?: string;
 }
+
+export interface NeuralSearchStatus {
+  model: string;
+  // Chunks embedded during this search (new or edited since the last one)
+  embedded: number;
+}
+
+// Reciprocal rank fusion: score = sum over rankings of weight / (RRF_K + rank)
+const RRF_K = 60;
+// Tuned on the benchmark dev split: half weight keeps the lexical top hit while the neural ranking fills the top 5
+const NEURAL_RRF_WEIGHT = 0.5;
 
 export interface SearchOptions {
   topK?: number;
@@ -441,6 +455,61 @@ export class SemanticSearchEngine {
       staleFiles.has(this.toRelPath(repoPath, r.filePath)) ? { ...r, stale: true } : r
     );
     return { results, index };
+  }
+
+  /**
+   * Search with the optional neural model fused in, when this repo opted in (`cb-trainer embeddings enable`) or
+   * `model` is given; otherwise the same as searchWithStatus(). The lexical ranking (BM25, symbols, PageRank) and
+   * the neural ranking are combined with reciprocal rank fusion, then weighted by kind (code above tests and docs).
+   */
+  public static async searchWithStatusAsync(
+    repoPath: string,
+    query: string,
+    topK: number = 5,
+    options: { model?: string; neuralWeight?: number } = {}
+  ): Promise<{ results: SearchResult[]; index: IndexFreshness; neural?: NeuralSearchStatus; neuralSkipped?: string }> {
+    const model = options.model ?? NeuralEmbeddings.config(repoPath)?.model;
+    if (!model) return this.searchWithStatus(repoPath, query, topK);
+    if (process.env.CODEBASE_ENCRYPTION_KEY || fs.existsSync(path.join(repoPath, '.codebase', '.master.key'))) {
+      return { ...this.searchWithStatus(repoPath, query, topK), neuralSkipped: 'The index is encrypted; vectors would be stored unencrypted, so neural search is off.' };
+    }
+
+    const { index, chunks } = this.refreshStore(repoPath, process.env.CODEBASE_TRAINER_AUTO_REFRESH !== '0');
+    const staleFiles = new Set(index.staleFiles);
+    if (chunks.length === 0 || query.trim() === '') return { results: [], index };
+
+    let neural: { vectors: Map<string, Float32Array>; embedded: number };
+    let queryVector: Float32Array;
+    try {
+      neural = await NeuralEmbeddings.chunkVectors(repoPath, model, chunks);
+      [queryVector] = await NeuralEmbeddings.embed(model, [query], 'query');
+    } catch (err) {
+      return { ...this.searchWithStatus(repoPath, query, topK), neuralSkipped: `Neural model unavailable (${(err as Error).message}); lexical results only.` };
+    }
+
+    const keyOf = (filePath: string, startLine: number) => `${filePath}:${startLine}`;
+    const lexical = this.rankChunks(repoPath, chunks, query, chunks.length);
+    const lexicalRank = new Map(lexical.map((r, i) => [keyOf(r.filePath, r.startLine), { result: r, rank: i + 1 }]));
+    const similarity = chunks.map(c => NeuralEmbeddings.dot(queryVector, neural.vectors.get(c.id)!));
+    const neuralOrder = chunks.map((_, i) => i).sort((a, b) => similarity[b] - similarity[a]);
+    const neuralRank = new Map(neuralOrder.map((chunkIndex, rank) => [chunkIndex, rank + 1]));
+    const weight = options.neuralWeight ?? NEURAL_RRF_WEIGHT;
+
+    const fused: SearchResult[] = chunks.map((chunk, i) => {
+      const lex = lexicalRank.get(keyOf(chunk.filePath, chunk.startLine));
+      const kind = lex?.result.kind ?? this.classifyKind(chunk.filePath, repoPath);
+      const score = ((lex ? 1 / (RRF_K + lex.rank) : 0) + weight / (RRF_K + neuralRank.get(i)!)) * KIND_SCORE_WEIGHT[kind];
+      const base: SearchResult = lex?.result ?? {
+        filePath: chunk.filePath, startLine: chunk.startLine, endLine: chunk.endLine, snippet: chunk.content, score: 0, kind, matchType: 'neural'
+      };
+      return { ...base, score: Number((score * 1000).toFixed(3)), neuralSimilarity: Number(similarity[i].toFixed(3)) };
+    });
+
+    const results = fused
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK)
+      .map(r => staleFiles.has(this.toRelPath(repoPath, r.filePath)) ? { ...r, stale: true } : r);
+    return { results, index, neural: { model, embedded: neural.embedded } };
   }
 
   private static rankChunks(repoPath: string, chunks: CodeChunk[], query: string, topK: number): SearchResult[] {

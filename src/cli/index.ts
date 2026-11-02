@@ -10,6 +10,7 @@ import { SemanticSearchEngine } from '../semantic/searchEngine.js';
 import { run1000QueryBenchmark } from './benchmark.js';
 import { CallGraphAnalyzer } from '../graph/callGraph.js';
 import { ImpactAnalyzer } from '../graph/impactAnalyzer.js';
+import { TestImpact, TestImpactAnalyzer } from '../graph/testImpact.js';
 import { DashboardGenerator } from '../ui/dashboardGenerator.js';
 import { AutoFixer } from '../fixer/autoFixer.js';
 import { GlobalIndexManager } from '../multi/globalIndex.js';
@@ -30,6 +31,9 @@ import { PermissionMapBuilder } from '../security/permissionMap.js';
 import { ExecutionFlowTracer } from '../flow/executionFlow.js';
 import { CodebaseWatcher } from '../watcher/fileWatcher.js';
 import { TreeSitter } from '../parsing/treeSitter.js';
+import { DEFAULT_NEURAL_MODEL, NEURAL_MODELS, NeuralEmbeddings } from '../semantic/neuralEmbeddings.js';
+import { CLIENTS, ClientId, SetupWizard } from './setup.js';
+import { ProjectConfigLoader } from '../config/projectConfig.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -50,7 +54,8 @@ program
   .description('Initialize .codebase/ index, scan AST structural facts, and mine conventions.yaml')
   .option('-d, --dir <path>', 'Target repo path', '.')
   .option('-e, --encrypt', 'Enable AES-256-GCM encryption for vector store at rest')
-  .action((options) => {
+  .option('--embeddings [model]', 'Also enable the optional local neural embedding model (downloads it once)')
+  .action(async (options) => {
     const repoPath = path.resolve(options.dir);
     console.log(`🔍 Scanning codebase AST facts at: ${repoPath}...`);
 
@@ -81,6 +86,61 @@ program
     console.log(`  - Type annotations required: ${conventions.rules.structural.typeAnnotationRequirement} (${evidence['structural.typeAnnotationRequirement'] || 'no evidence'})`);
     console.log(`  - Documentation: ${conventions.rules.documentation.commentStyle}`);
     console.log(`  - Git: ${conventions.rules.git.commitFormat}; branches: ${conventions.rules.git.branchNaming}`);
+
+    if (options.embeddings) {
+      await enableEmbeddings(repoPath, typeof options.embeddings === 'string' ? options.embeddings : DEFAULT_NEURAL_MODEL);
+    }
+  });
+
+/**
+ * Opts this repo in to neural search: checks the optional dependency, then downloads the model (once) and embeds
+ * the index so the first search is fast.
+ */
+async function enableEmbeddings(repoPath: string, model: string): Promise<void> {
+  if (!(await NeuralEmbeddings.isInstalled())) {
+    console.error('❌ Neural embeddings need the optional dependency @huggingface/transformers: npm install @huggingface/transformers');
+    process.exitCode = 1;
+    return;
+  }
+  NeuralEmbeddings.enable(repoPath, model);
+  console.log(`🧠 Neural search enabled with ${model}. Downloading the model if needed (into ${NeuralEmbeddings.modelCacheDir()}) and embedding the index...`);
+  const start = Date.now();
+  const result = await SemanticSearchEngine.searchWithStatusAsync(repoPath, 'warm up', 1);
+  if (result.neuralSkipped) {
+    console.error(`⚠️ ${result.neuralSkipped}`);
+    return;
+  }
+  console.log(`✅ Embedded ${result.neural?.embedded ?? 0} chunk(s) in ${((Date.now() - start) / 1000).toFixed(1)} s. Searches now fuse lexical and neural rankings; \`cb-trainer embeddings disable\` turns it off.`);
+}
+
+const embeddings = program.command('embeddings').description('Optional local neural embeddings for search (off by default)');
+
+embeddings
+  .command('enable')
+  .description('Enable neural search for this repo: downloads a small model once and embeds the index')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-m, --model <id>', `Model (${Object.keys(NEURAL_MODELS).join(', ')})`, DEFAULT_NEURAL_MODEL)
+  .action(async (options) => enableEmbeddings(path.resolve(options.dir), options.model));
+
+embeddings
+  .command('disable')
+  .description('Disable neural search for this repo and delete its stored vectors')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .action((options) => {
+    NeuralEmbeddings.disable(path.resolve(options.dir));
+    console.log('Neural search disabled; searches are lexical only.');
+  });
+
+embeddings
+  .command('status')
+  .description('Show whether neural search is enabled and installed')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .action(async (options) => {
+    const config = NeuralEmbeddings.config(path.resolve(options.dir));
+    const installed = await NeuralEmbeddings.isInstalled();
+    console.log(`Neural search: ${config ? `enabled (${config.model}, since ${config.enabledAt})` : 'off (lexical search only)'}`);
+    console.log(`@huggingface/transformers: ${installed ? 'installed' : 'not installed'}`);
+    console.log(`Model cache: ${NeuralEmbeddings.modelCacheDir()}`);
   });
 
 program
@@ -492,6 +552,50 @@ program
 
     console.log(`\n⚠️ Risk Assessment Summary:`);
     impact.breakingRiskWarning.forEach(w => console.log(`   - ${w}`));
+
+    console.log(`\n🧪 Tests to run (${impact.tests.files.length} of ${impact.tests.totalTests}):`);
+    impact.tests.commands.forEach(c => console.log(`   ${c.command}`));
+  });
+
+program
+  .command('tests [targets...]')
+  .description('Tests to run for a change: the files or symbols given, or by default the git diff against HEAD (or --base)')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-b, --base <ref>', 'Use the diff against this git ref instead of HEAD')
+  .option('-c, --commands', 'Print only the commands to run')
+  .option('-j, --json', 'Output as JSON')
+  .action((targets: string[], options) => {
+    const repoPath = path.resolve(options.dir);
+    let impact: TestImpact;
+    if (targets.length > 0) {
+      impact = TestImpactAnalyzer.forTargets(repoPath, targets);
+    } else {
+      const git = DiffChecker.readGitDiff(repoPath, options.base);
+      if (git.error) {
+        console.error(`❌ ${git.error}`);
+        process.exitCode = 1;
+        return;
+      }
+      const files = DiffParser.parse(git.diff);
+      git.untracked.forEach(rel => files.push(DiffParser.asAddedFile(rel, fs.readFileSync(path.join(repoPath, rel), 'utf8'))));
+      impact = TestImpactAnalyzer.forChangedFiles(repoPath, files);
+    }
+
+    if (options.json) {
+      console.log(JSON.stringify(impact, null, 2));
+      return;
+    }
+    if (options.commands) {
+      impact.commands.forEach(c => console.log(c.command));
+      return;
+    }
+    console.log(`🧪 ${impact.tests.length} of ${impact.totalTests} test file(s) affected by ${impact.targets.length} changed file(s)`);
+    impact.tests.forEach(t => console.log(`   ${t.file}  — ${t.reason}`));
+    if (impact.commands.length > 0) {
+      console.log('\nRun:');
+      impact.commands.forEach(c => console.log(`   ${c.command}`));
+    }
+    impact.notes.forEach(note => console.log(`\nNote: ${note}`));
   });
 
 program
@@ -500,17 +604,19 @@ program
   .option('-d, --dir <path>', 'Target repo path', '.')
   .option('-k, --limit <number>', 'Top K results', '5')
   .option('-j, --json', 'Output results in JSON format')
-  .action((query, options) => {
+  .action(async (query, options) => {
     const repoPath = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10) || 5;
-    const { results, index } = SemanticSearchEngine.searchWithStatus(repoPath, query, limit);
+    const { results, index, neural, neuralSkipped } = await SemanticSearchEngine.searchWithStatusAsync(repoPath, query, limit);
 
     if (options.json) {
       console.log(JSON.stringify(results, null, 2));
       return;
     }
 
-    console.log(`🔎 Performing hybrid semantic search for: "${query}"...`);
+    console.log(`🔎 Performing hybrid semantic search for: "${query}" (${neural ? `lexical + neural, ${neural.model}` : 'lexical'})...`);
+    if (neural && neural.embedded > 0) console.log(`🧠 Embedded ${neural.embedded} new or changed chunk(s).`);
+    if (neuralSkipped) console.log(`⚠️ ${neuralSkipped}`);
     if (index.fullRebuild) {
       console.log(`🧱 Built search index (${index.checkedFiles} files).`);
     } else if (index.refreshedFiles.length + index.removedFiles.length > 0) {
@@ -692,6 +798,8 @@ program
   .option('-d, --dir <path>', 'Target repo path', '.')
   .option('-b, --base <ref>', 'Compare the working tree against this git ref instead of HEAD')
   .option('-j, --json', 'Output the check report as JSON')
+  .option('-f, --format <format>', 'text (default), json, or sarif (for GitHub Code Scanning)')
+  .option('-o, --output <file>', 'Write the json or sarif report to this file instead of stdout')
   .action((target, options) => {
     const repoPath = path.resolve(options.dir);
     let report;
@@ -703,8 +811,16 @@ program
       report = DiffChecker.check(repoPath, { base: options.base });
     }
 
-    if (options.json) {
-      console.log(JSON.stringify(report, null, 2));
+    const format = options.json ? 'json' : (options.format || 'text');
+    if (format === 'json' || format === 'sarif') {
+      const output = JSON.stringify(format === 'sarif' ? SarifExporter.fromDiffReport(report) : report, null, 2);
+      if (options.output) {
+        fs.mkdirSync(path.dirname(path.resolve(options.output)), { recursive: true });
+        fs.writeFileSync(options.output, output + '\n', 'utf8');
+        console.error(`Wrote ${options.output} (${report.findings.length} finding(s)).`);
+      } else {
+        console.log(output);
+      }
     } else {
       console.log(`🔍 Checking ${report.source}...`);
       if (report.error) console.error(`❌ ${report.error}`);
@@ -714,6 +830,10 @@ program
         if (f.snippet) console.log(`     ${f.snippet}`);
       });
       console.log(`\n${report.passed ? '✅' : '🚨'} ${report.summary}`);
+      if (report.testsToRun && report.testsToRun.tests.length > 0) {
+        console.log(`🧪 Tests to run (${report.testsToRun.tests.length} of ${report.testsToRun.totalTests}):`);
+        report.testsToRun.commands.forEach(c => console.log(`   ${c.command}`));
+      }
       console.log(`Not checked: ${report.notCovered.join('; ')}.`);
     }
     if (!report.passed) process.exitCode = 1;
@@ -759,4 +879,43 @@ program
     await runMCPServer();
   });
 
-program.parse(process.argv);
+program
+  .command('setup')
+  .description('Register the MCP server with your AI clients (Claude Code, Cursor, VS Code; Windsurf when named), then build the first index')
+  .option('-d, --dir <path>', 'Target repo path', '.')
+  .option('-c, --client <ids...>', `Clients to configure: ${Object.keys(CLIENTS).join(', ')}, all (default: the ones detected)`)
+  .option('--dry-run', 'Show what would be written without changing anything')
+  .option('--no-index', 'Skip building the index')
+  .action((options) => {
+    const repoPath = path.resolve(options.dir);
+    let clients: ClientId[];
+    try {
+      clients = SetupWizard.clientsFor(repoPath, options.client);
+    } catch (err) {
+      console.error(`❌ ${(err as Error).message}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`🔌 Registering the codebase-trainer MCP server${options.dryRun ? ' (dry run)' : ''}:`);
+    SetupWizard.configure(repoPath, clients, Boolean(options.dryRun)).forEach(a => {
+      console.log(`   ${CLIENTS[a.client].label.padEnd(26)} ${a.file}  ${a.status}${a.detail ? ` (${a.detail})` : ''}`);
+    });
+    if (options.dryRun) return;
+
+    if (options.index) {
+      console.log('\n🧠 Building the first index...');
+      const start = Date.now();
+      SemanticSearchEngine.buildIndex(repoPath);
+      ConventionMiner.loadOrGenerate(repoPath);
+      console.log(`✅ Indexed in ${((Date.now() - start) / 1000).toFixed(1)} s. The index refreshes itself as files change.`);
+    }
+    const config = ProjectConfigLoader.load(repoPath);
+    config.warnings.forEach(w => console.log(`⚠️ ${config.source}: ${w}`));
+    console.log('\nRestart your AI client, then try:');
+    console.log('   "Use codebase-trainer feature_slice to show me everything involved in <a feature of this app>."');
+    console.log('   "Before you edit <file>, run codebase-trainer impact on it and tell me which tests to run."');
+    console.log('   "Run codebase-trainer review_diff on my changes."');
+    console.log('\nCommit the client config files so your team gets the same setup. Optional: codebase-trainer.yaml for shared settings; `cb-trainer embeddings enable` for neural search.');
+  });
+
+await program.parseAsync(process.argv);
