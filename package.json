@@ -2,6 +2,14 @@
   "name": "codebase-trainer",
   "version": "2.0.0",
   "description": "Local, offline codebase context for AI coding agents: feature slices across UI, API and data layers, flow tracing, impact and test selection, diff review and a permission map, over MCP or CLI",
+  "homepage": "https://om0852.github.io/codebase-trainer/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/om0852/codebase-trainer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/om0852/codebase-trainer/issues"
+  },
   "main": "dist/cli/index.js",
   "bin": {
     "cb-trainer": "dist/cli/index.js"
@@ -40,7 +48,15 @@
     "context-pack",
     "bm25-search",
     "ast-facts",
-    "call-graph"
+    "call-graph",
+    "claude-code",
+    "cursor",
+    "model-context-protocol",
+    "ai-coding-agent",
+    "code-search",
+    "feature-slice",
+    "impact-analysis",
+    "test-impact"
   ],
   "author": "Antigravity Engineering",
   "license": "MIT",

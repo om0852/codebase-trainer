@@ -21,6 +21,8 @@ function typeTerminal() {
   const code = document.getElementById('terminalCode');
   if (!code || code.dataset.done) return;
   code.dataset.done = '1';
+  // The HTML carries the finished output for crawlers and no-JS readers; type it in from blank
+  code.textContent = '';
   const lines = TERMINAL.map(l => l.cmd ? { text: `$ ${l.cmd}`, cls: 't-cmd', typed: true } : { text: l.out, cls: l.cls ?? '' });
   if (reducedMotion) {
     code.innerHTML = lines.map(l => `<span class="${l.cls}">${escape(l.text)}</span>`).join('\n');

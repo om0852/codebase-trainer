@@ -3,14 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Docs — Codebase Trainer</title>
-  <meta name="description" content="Codebase Trainer gives Claude Code, Cursor and VS Code agents the whole feature in one call: UI, API, route handler, service, data model, auth checks and the tests to run, with file:line evidence, within a token budget, fully offline." />
+  <title>Codebase Trainer docs: setup, MCP tools, CLI and benchmark</title>
+  <meta name="description" content="Set up Codebase Trainer with Claude Code, Cursor or VS Code. The eight MCP tools with real output, CLI, configuration, CI, and benchmark methodology." />
+  <link rel="canonical" href="https://om0852.github.io/codebase-trainer/docs.html" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Codebase Trainer" />
+  <meta property="og:title" content="Codebase Trainer docs: setup, MCP tools, CLI and benchmark" />
+  <meta property="og:description" content="Set up Codebase Trainer with Claude Code, Cursor or VS Code. The eight MCP tools with real output, CLI, configuration, CI, and benchmark methodology." />
+  <meta property="og:url" content="https://om0852.github.io/codebase-trainer/docs.html" />
+  <meta property="og:image" content="https://om0852.github.io/codebase-trainer/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Codebase Trainer: Stop grepping. Give your agent the whole feature." />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Codebase Trainer docs: setup, MCP tools, CLI and benchmark" />
+  <meta name="twitter:description" content="Set up Codebase Trainer with Claude Code, Cursor or VS Code. The eight MCP tools with real output, CLI, configuration, CI, and benchmark methodology." />
+  <meta name="twitter:image" content="https://om0852.github.io/codebase-trainer/og-image.png" />
+  <meta name="twitter:image:alt" content="Codebase Trainer: Stop grepping. Give your agent the whole feature." />
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="Codebase Trainer for language models" />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://om0852.github.io/codebase-trainer/docs.html#article",
+      "headline": "Codebase Trainer documentation",
+      "description": "Setup, the eight MCP tools with real output, CLI reference, configuration, neural search, CI, benchmark methodology and troubleshooting.",
+      "url": "https://om0852.github.io/codebase-trainer/docs.html",
+      "inLanguage": "en",
+      "dateModified": "2026-11-03",
+      "image": "https://om0852.github.io/codebase-trainer/og-image.png",
+      "about": {
+        "@id": "https://om0852.github.io/codebase-trainer/#software"
+      },
+      "isPartOf": {
+        "@id": "https://om0852.github.io/codebase-trainer/#website"
+      },
+      "proficiencyLevel": "Beginner"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Codebase Trainer",
+          "item": "https://om0852.github.io/codebase-trainer/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Documentation",
+          "item": "https://om0852.github.io/codebase-trainer/docs.html"
+        }
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "name": "Set up Codebase Trainer for Claude Code, Cursor or VS Code",
+      "totalTime": "PT2M",
+      "tool": [
+        {
+          "@type": "HowToTool",
+          "name": "Node.js 22 or later"
+        }
+      ],
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Register the server and build the index",
+          "text": "In the root of your repository run: npx codebase-trainer setup",
+          "url": "https://om0852.github.io/codebase-trainer/docs.html#quickstart"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Restart your editor",
+          "text": "Your editor starts the MCP server (npx -y codebase-trainer mcp) from the repository folder.",
+          "url": "https://om0852.github.io/codebase-trainer/docs.html#quickstart"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Ask your agent",
+          "text": "For example: Use codebase-trainer feature_slice to show me everything involved in password reset.",
+          "url": "https://om0852.github.io/codebase-trainer/docs.html#quickstart"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "My editor says the MCP server failed to start",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Check node --version is 22 or later, and that npx -y codebase-trainer mcp starts in a terminal (it waits silently for input; press Ctrl+C). On Windows, if npx is not found by the editor, install globally and use cb-trainer with args [\"mcp\"]."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "It indexed the wrong folder",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The server indexes the folder it is started in. Use a project-level config (.mcp.json, .cursor/mcp.json, .vscode/mcp.json) so your editor starts it in the repo, or run setup from the repo root."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "The first call is slow on a big repo",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The first index and the first call graph parse every file once (seconds on a 10,000-file repo). The server does this in the background right after it starts, and after that only changed files are processed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does any code leave my machine?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. No tool makes network calls, and a test runs all eight with sockets, DNS and fetch disabled. The only download is the optional neural model, after you enable it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Results look out of date",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Changed files are re-indexed before every search, and the server watches the repo. If you set CODEBASE_TRAINER_AUTO_REFRESH=0, results from changed files are marked stale; run cb-trainer update. To start over, delete .codebase/."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "A finding is wrong",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Findings are static heuristics with evidence; check the evidence lines. For the permission map, add your own guard names under auth.guards and public routes under auth.publicPaths in codebase-trainer.yaml. Please report false positives on GitHub."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://om0852.github.io/codebase-trainer/#software",
+      "name": "Codebase Trainer",
+      "alternateName": [
+        "codebase-trainer",
+        "cb-trainer"
+      ],
+      "description": "Open-source local MCP server and CLI that gives AI coding agents (Claude Code, Cursor, VS Code) every file a feature touches: UI, API client, route handler, service, database model, auth checks and tests, with file:line evidence, inside a token budget, fully offline.",
+      "applicationCategory": "DeveloperApplication",
+      "applicationSubCategory": "Model Context Protocol (MCP) server for AI coding agents",
+      "operatingSystem": "Windows, macOS, Linux",
+      "softwareVersion": "2.0.0",
+      "softwareRequirements": "Node.js 22 or later",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": "https://om0852.github.io/codebase-trainer/",
+      "downloadUrl": "https://www.npmjs.com/package/codebase-trainer",
+      "installUrl": "https://om0852.github.io/codebase-trainer/docs.html#quickstart",
+      "image": "https://om0852.github.io/codebase-trainer/og-image.png",
+      "screenshot": "https://om0852.github.io/codebase-trainer/og-image.png",
+      "sameAs": [
+        "https://github.com/om0852/codebase-trainer",
+        "https://www.npmjs.com/package/codebase-trainer"
+      ],
+      "featureList": [
+        "feature_slice: every file a feature touches, grouped by layer, packed to a token budget",
+        "trace_flow: execution path from entry point to database with file:line evidence",
+        "impact: dependents of a change and the tests to run, with a ready-to-run command",
+        "review_diff: secrets, broken imports, API contract drift and permission problems in a diff, as JSON, Markdown or SARIF",
+        "api_map: routes, client/server drift and a permission map of auth, scopes and roles",
+        "search: BM25 keyword search with exact symbols and PageRank, optional local neural embeddings",
+        "Works offline: no API keys, no network calls, no telemetry"
+      ]
+    }
+  ]
+}
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cpath d='M21 11.5a7 7 0 1 0 0 9' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/src/style.css" />
   <link rel="stylesheet" href="/src/site.css" />
 </head>
@@ -205,13 +400,24 @@ then tell me which files I need to change to add rate limiting.</code></pre>
 
         <div class="ide-config-body">
           <div class="config-meta">
-            <span id="configPath"></span>
+            <span id="configPath">.mcp.json — in the repository root, committed for your team</span>
             <button class="btn-white" id="copyConfigBtn">COPY</button>
           </div>
           <div class="code-window">
-            <pre><code id="configJsonDisplay"></code></pre>
+            <pre><code id="configJsonDisplay">{
+  "mcpServers": {
+    "codebase-trainer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "codebase-trainer",
+        "mcp"
+      ]
+    }
+  }
+}</code></pre>
           </div>
-          <p class="config-note" id="configNote"></p>
+          <p class="config-note" id="configNote">Or run in the repo root: claude mcp add --scope project codebase-trainer -- npx -y codebase-trainer mcp</p>
         </div>
       </div>
     
@@ -237,17 +443,33 @@ then tell me which files I need to change to add rate limiting.</code></pre>
             <h3 id="activeToolName" class="detail-title">search</h3>
             <span class="detail-badge" id="activeToolTag">FIND CODE</span>
           </div>
-          <p id="activeToolDesc" class="detail-desc"></p>
+          <p id="activeToolDesc" class="detail-desc">Ranked snippets labelled code, test, doc or config, with file:line. Keyword ranking (BM25 over stemmed words, exact symbols, PageRank) with code ranked first; fused with a local neural model when the repo opts in. scope: &quot;workspace&quot; searches sibling repos; detail: &quot;refs&quot; returns locations only.</p>
           <div class="ask-agent">
             <span class="ask-label">ASK YOUR AGENT</span>
-            <p id="activeToolPrompt"></p>
+            <p id="activeToolPrompt">&quot;Where are comments added to an article? Use codebase-trainer search.&quot;</p>
           </div>
           <div class="code-window">
             <div class="code-window-header">
-              <span id="activeToolSource">RESPONSE</span>
+              <span id="activeToolSource">SEARCH · NODE-EXPRESS-REALWORLD</span>
               <span>JSON</span>
             </div>
-            <pre><code id="activeToolJson"></code></pre>
+            <pre><code id="activeToolJson">{
+  "semanticResults": [
+    {
+      "filePath": "src/app/routes/article/article.controller.ts",
+      "startLine": 152, "endLine": 163, "kind": "code", "score": 18.2,
+      "snippet": "const comments = await getCommentsByArticle(req.params.slug, req.auth?.user?.id); …"
+    },
+    {
+      "filePath": "src/app/routes/article/article.service.ts",
+      "startLine": 476, "endLine": 487, "kind": "code", "score": 17.7,
+      "snippet": "const comment = await prisma.comment.create({ …"
+    }
+  ],
+  "mode": "lexical",
+  "index": { "fullRebuild": false, "refreshedFiles": 0, "removedFiles": 0 },
+  "budget": { "tokens": 348, "budgetTokens": 8000 }
+}</code></pre>
           </div>
         </div>
       </div>
