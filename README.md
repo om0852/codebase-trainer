@@ -4,11 +4,25 @@
 
 `codebase-trainer` (`cb-trainer`) gives AI coding agents (Claude Code, Cursor, and other MCP clients) a local map of a repository so they stop re-grepping it: code search, execution-flow traces, change impact, a diff checker, and conventions learned from the code, served over the **Model Context Protocol (MCP)** or the CLI. It runs fully offline with no API keys, vector database, or language servers.
 
-**How it works, honestly:** source files are analysed with pattern-based (regex) extractors, not a compiler or language server. That keeps it dependency-free and fast, and works best on JavaScript/TypeScript; Python is partially supported and Go/Java/Rust only lightly. Tools report what they could not determine (`pathFound: false`, `notCovered`, `evidence`, `stale`) rather than guessing.
+**How it works, honestly:** TypeScript, JavaScript and Python are parsed with tree-sitter (WebAssembly grammars shipped in the package), with pattern-based extractors as a fallback and for other languages; there is no compiler or language server. It works best on JavaScript/TypeScript web apps (Next.js, Express, NestJS, tRPC, Prisma, Drizzle); Python is partially supported and Go/Java/Rust only lightly. Search is keyword-based (BM25 over stemmed tokens, symbols, PageRank) unless you opt in to a small local neural model. Tools report what they could not determine (`pathFound: false`, `notCovered`, `evidence`, `stale`) rather than guessing. Requires Node 22 or later.
 
 ---
 
-## 🆕 What's new in 1.4.0
+## 🆕 What's new in 2.0.0
+
+- **`feature_slice`**: one call returns everything a feature touches, from UI to client, route, service and data model, with why each file is included, the flows between them, and code packed to a token budget. On the benchmark's feature questions it finds 83% of the needed files in about 4,500 tokens; the top 10 search results find 59%.
+- **Cross-stack links**: Prisma, Drizzle and TypeORM calls reach their models; NestJS dependency injection, tRPC procedures, fetch wrappers and axios instances reach their handlers.
+- **Permission map**: which routes require auth, with which scopes and roles, and where that looks wrong (a write with no guard next to guarded routes, a delete allowed by an edit scope, a read scope guarding a write). Also checked on changed routes by `review_diff`.
+- **Test impact**: the tests a change affects and the command to run them (vitest, jest, node:test, mocha, playwright, pytest); in `impact`, `review_diff` and `cb-trainer tests`.
+- **Eight MCP tools instead of twenty** (`search`, `feature_slice`, `trace_flow`, `impact`, `review_diff`, `api_map`, `codebase_overview`, `quality_scan`), each with a token budget. The 1.x names keep working.
+- **Setup and team settings**: `npx codebase-trainer setup` registers the server with Claude Code, Cursor and VS Code; `codebase-trainer.yaml` holds shared settings.
+- **Scale**: a SQLite index, file watching in the server and per-file caches. On a 10,000-file repo, warm searches take 43 ms at p50 and 50 ms at p95 (previously 2.1 s and 2.7 s).
+- **Optional neural search** (`cb-trainer embeddings enable`): a 23 MB local model fused with keyword search puts the right file in the top 5 for 94% of benchmark questions instead of 84%.
+- **CI**: `cb-trainer review --format sarif` and a GitHub Action for pull request review in Code Scanning.
+
+**Breaking changes:** Node 22 or later. MCP tools have new names (the old names are aliases through 2.x). The index moves from `.codebase/embeddings.json` to `.codebase/index.sqlite` and is rebuilt automatically on first use.
+
+## What changed in 1.4.0
 
 - **Import graph that actually resolves imports**: ES module imports (previously missed entirely), `tsconfig`/`jsconfig` path aliases, `.js` → `.ts`, index files, Python/Java/Rust modules. PageRank, impact analysis and cycle detection now run on it.
 - **Execution-flow tracing from real call sites**: entry points (pages, route handlers, CLI commands) → calls with `file:line` evidence → `fetch('/api/…')` linked to the matching route handler → data layer. Returns `pathFound: false` instead of inventing a path.
@@ -21,18 +35,24 @@
 
 104 hand-labelled questions ("where is password reset implemented", "everything involved in favoriting an article") on four open-source apps pinned to exact commits: [taxonomy](https://github.com/shadcn-ui/taxonomy) (Next.js + Prisma), [node-express-realworld](https://github.com/gothinkster/node-express-realworld-example-app) (Express + Prisma), [nestjs-realworld](https://github.com/lujakob/nestjs-realworld-example-app) (NestJS + TypeORM) and [create-t3-turbo](https://github.com/t3-oss/create-t3-turbo) (tRPC monorepo). The baseline is what an agent does without an index: grep the question's words and open the files with the most matches.
 
-| v1.4.0, all 104 questions | codebase-trainer | grep baseline |
-|---|---|---|
-| Right file ranked first ("locate", 80 questions) | **56%** | 24% |
-| Right file in the top 5 | **83%** | 65% |
-| Mean reciprocal rank | **0.69** | 0.43 |
-| Median tokens read to reach the right file | **993** | 3,974 |
-| Share of a feature's files in the top 10 ("feature", 24 questions) | **54%** | 40% |
-| Features with every needed file in the top 20 | 17% | 0% |
+| v2.0.0, all 104 questions | codebase-trainer | with neural search | grep baseline |
+|---|---|---|---|
+| Right file ranked first ("locate", 80 questions) | **60%** | 61% | 24% |
+| Right file in the top 5 | **84%** | **94%** | 66% |
+| Mean reciprocal rank | **0.71** | **0.75** | 0.43 |
+| Median tokens read to reach the right file | **1,062** | 945 | 3,974 |
+| Share of a feature's files in the top 10 ("feature", 24 questions) | **59%** | 65% | 42% |
 
-Search takes 60–150 ms per query on these repos (100–170 files each). The 28 questions held out from tuning score the same as the rest (MRR 0.72 vs 0.37).
+| `feature_slice`, the 24 feature questions | |
+|---|---|
+| Share of the needed files in one call | **83%** |
+| Features with every needed file | 50% |
+| Median tokens for the whole slice | 4,552 |
+| Share of returned files that were labelled as needed | 33% |
 
-**Where it is still weak:** whole-feature questions (only 17% fully covered) and Prisma schemas, which are not indexed yet. Both are the next items on the [implementation plan](docs/IMPLEMENTATION_PLAN.md). Reproduce with `npm run bench:setup && npm run bench`; results are written to `bench/results/`.
+Keyword search takes 20–40 ms per query on these repos (100–170 files each); neural search 90–160 ms. Settings were tuned on 76 questions and confirmed on 28 held out.
+
+**Where it is still weak:** `feature_slice` returns more files than a change strictly needs (33% precision against the labels), and tRPC monorepos (t3-turbo) score lowest. Details and limits are in the [implementation plan](docs/IMPLEMENTATION_PLAN.md). Reproduce with `npm run bench:setup && npm run bench`; results are written to `bench/results/`.
 
 ## 🌟 Features
 

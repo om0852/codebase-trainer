@@ -47,7 +47,7 @@ const program = new Command();
 program
   .name('cb-trainer')
   .description('Fast local Codebase Intelligence Index & NLP Model generator for AI agents & IDEs')
-  .version('1.4.0');
+  .version('2.0.0');
 
 program
   .command('init')
