@@ -4,6 +4,7 @@ import { ASTFact } from '../types/index.js';
 import { CodebaseIgnore } from './codebaseIgnore.js';
 import { GitIgnoreRules } from './gitignore.js';
 import { extractCodeFacts } from '../parsing/codeFacts.js';
+import { RepoWatch } from '../watcher/repoWatch.js';
 
 // Build output, dependency and cache directories that are never indexed, even without a .gitignore
 const IGNORED_DIRS = [
@@ -24,35 +25,64 @@ export interface SourceFileEntry {
   size: number;
 }
 
+// A full walk at least this often even while a watcher reports changes, in case it missed some
+const FULL_WALK_MS = 10 * 60 * 1000;
+// Changes to these files can change which files are indexed
+const RULE_FILES = new Set(['.gitignore', '.codebaseignore', 'codebase-trainer.yaml', 'codebase-trainer.yml', '.git/info/exclude']);
+
+interface StatKey { mtimeMs: number; size: number }
+
 export class ASTExtractor {
-  /**
-   * Reads a source file as UTF-8, or returns null when it is missing or unreadable.
-   */
-  public static readSourceFile(filePath: string): string | null {
-    if (!fs.existsSync(filePath)) return null;
+  // Per-process caches, valid while a file's mtime and size are unchanged: a long-running server reads and
+  // analyses each file once instead of on every tool call
+  private static contentCache = new Map<string, StatKey & { content: string }>();
+  private static factCache = new Map<string, StatKey & { fact: ASTFact | null }>();
+  private static listingCache = new Map<string, { entries: SourceFileEntry[]; walkedAt: number }>();
+  // The last scanDirectory result per repo: returned as the same array while no file changed, so analyses keyed
+  // on it (import graph, call edges) are reused
+  private static lastScan = new Map<string, ASTFact[]>();
+
+  private static statOf(filePath: string): fs.Stats | null {
     try {
-      return fs.readFileSync(filePath, 'utf8');
+      return fs.statSync(filePath);
     } catch {
       return null;
     }
   }
 
-  public static extractFileFacts(filePath: string): ASTFact | null {
-    if (!fs.existsSync(filePath)) return null;
-
+  /**
+   * Reads a source file as UTF-8, or returns null when it is missing or unreadable.
+   */
+  public static readSourceFile(filePath: string): string | null {
+    const stats = this.statOf(filePath);
+    if (!stats || !stats.isFile()) {
+      this.contentCache.delete(filePath);
+      return null;
+    }
+    const cached = this.contentCache.get(filePath);
+    if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) return cached.content;
     try {
-      const stats = fs.statSync(filePath);
-      if (stats.size > MAX_FILE_BYTES) return null;
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (stats.size <= MAX_FILE_BYTES) this.contentCache.set(filePath, { mtimeMs: stats.mtimeMs, size: stats.size, content });
+      return content;
     } catch {
       return null;
     }
+  }
 
-    let content = '';
-    try {
-      content = fs.readFileSync(filePath, 'utf8');
-    } catch {
-      return null;
-    }
+  public static extractFileFacts(filePath: string, known?: StatKey): ASTFact | null {
+    const stats = known ?? this.statOf(filePath);
+    if (!stats || stats.size > MAX_FILE_BYTES) return null;
+    const cached = this.factCache.get(filePath);
+    if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) return cached.fact;
+    const fact = this.computeFileFacts(filePath);
+    this.factCache.set(filePath, { mtimeMs: stats.mtimeMs, size: stats.size, fact });
+    return fact;
+  }
+
+  private static computeFileFacts(filePath: string): ASTFact | null {
+    const content = this.readSourceFile(filePath);
+    if (content === null) return null;
 
     const lines = content.split(/\r?\n/);
     const ext = path.extname(filePath).toLowerCase();
@@ -252,24 +282,61 @@ export class ASTExtractor {
    * used to detect changes since the last index build.
    */
   public static listSourceFiles(dirPath: string): SourceFileEntry[] {
+    // While the MCP server watches the repo, patch the last listing with the paths that changed
+    const changes = RepoWatch.takeChanges(dirPath);
+    const cached = this.listingCache.get(dirPath);
+    if (changes !== null && changes !== 'all' && cached && Date.now() - cached.walkedAt < FULL_WALK_MS) {
+      const patched = this.patchListing(dirPath, cached.entries, changes);
+      if (patched) {
+        cached.entries = patched;
+        return [...patched];
+      }
+    }
+    const entries = this.walkSourceFiles(dirPath);
+    if (changes !== null) this.listingCache.set(dirPath, { entries, walkedAt: Date.now() });
+    return [...entries];
+  }
+
+  /** The listing with `changes` applied, or null when they need a full walk (directories or ignore rules changed). */
+  private static patchListing(dirPath: string, entries: SourceFileEntry[], changes: Set<string>): SourceFileEntry[] | null {
+    if (changes.size === 0) return entries;
+    const gitignore = GitIgnoreRules.load(dirPath);
+    const byPath = new Map(entries.map(e => [path.relative(dirPath, e.filePath).replace(/\\/g, '/'), e]));
+    for (const rel of changes) {
+      if (RULE_FILES.has(rel)) return null;
+      const abs = path.join(dirPath, rel);
+      const stats = this.statOf(abs);
+      if (stats?.isDirectory()) return null;
+      if (stats && this.isIndexablePath(dirPath, abs, gitignore)) {
+        byPath.set(rel, { filePath: abs, mtimeMs: stats.mtimeMs, size: stats.size });
+      } else {
+        byPath.delete(rel);
+        // A deleted directory: drop everything that was under it
+        if (!stats) [...byPath.keys()].filter(k => k.startsWith(rel + '/')).forEach(k => byPath.delete(k));
+      }
+    }
+    return [...byPath.values()];
+  }
+
+  private static walkSourceFiles(dirPath: string): SourceFileEntry[] {
     const entries: SourceFileEntry[] = [];
     const gitignore = GitIgnoreRules.load(dirPath);
 
-    function walk(currentDir: string) {
+    function walk(currentDir: string, isRoot: boolean) {
       let dirents: fs.Dirent[] = [];
       try {
         dirents = fs.readdirSync(currentDir, { withFileTypes: true });
       } catch {
         return;
       }
+      // A nested repository or git worktree (its own `.git` file or folder) is a separate checkout, not part of this one
+      if (!isRoot && dirents.some(d => d.name === '.git')) return;
       for (const entry of dirents) {
         const fullPath = path.join(currentDir, entry.name);
         const relPath = path.relative(dirPath, fullPath);
         if (entry.isDirectory()) {
-          // A nested repository or git worktree (its own `.git` file or folder) is a separate checkout, not part of this one
-          const nestedCheckout = fs.existsSync(path.join(fullPath, '.git'));
-          if (!IGNORED_DIRS.includes(entry.name) && !gitignore.ignores(relPath, true) && !nestedCheckout) {
-            walk(fullPath);
+          if (!IGNORED_DIRS.includes(entry.name) && !gitignore.ignores(relPath, true)) {
+            walk(fullPath, false);
           }
         } else if (entry.isFile()) {
           if (!SOURCE_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())) continue;
@@ -285,7 +352,7 @@ export class ASTExtractor {
       }
     }
 
-    walk(dirPath);
+    walk(dirPath, true);
     return entries;
   }
 
@@ -309,10 +376,23 @@ export class ASTExtractor {
 
   public static scanDirectory(dirPath: string): ASTFact[] {
     const facts: ASTFact[] = [];
+    // The listing already has each file's stats; facts are reused while they are unchanged
     this.listSourceFiles(dirPath).forEach(entry => {
-      const fact = ASTExtractor.extractFileFacts(entry.filePath);
+      const fact = ASTExtractor.extractFileFacts(entry.filePath, entry);
       if (fact) facts.push(fact);
     });
+    const last = this.lastScan.get(dirPath);
+    if (last && last.length === facts.length && last.every((f, i) => f === facts[i])) return last;
+    this.lastScan.set(dirPath, facts);
     return facts;
+  }
+
+  /** Lowercased file content (cached with the content), for case-insensitive text scans over many files. */
+  public static readSourceFileLower(filePath: string): string | null {
+    const content = this.readSourceFile(filePath);
+    if (content === null) return null;
+    const cached = this.contentCache.get(filePath) as (StatKey & { content: string; lower?: string }) | undefined;
+    if (!cached || cached.content !== content) return content.toLowerCase();
+    return cached.lower ??= content.toLowerCase();
   }
 }

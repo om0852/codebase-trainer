@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
 import { SecretSanitizer } from '../security/secretSanitizer.js';
 import { CodebaseIgnore } from '../extractors/codebaseIgnore.js';
-import { IndexEncryption, EncryptedPayload } from '../storage/encryption.js';
+import { ChunkStores, FileUpdate } from '../storage/chunkStore.js';
 import { IndexStore } from '../storage/db.js';
 import { PageRankCalculator, PageRankResult } from '../graph/pageRank.js';
 import { DenseVectorEngine } from './denseVectorEngine.js';
@@ -82,6 +82,23 @@ export interface IndexFreshness {
   removedFiles: string[];
   staleFiles: string[];
   error?: string;
+}
+
+interface PreparedChunk {
+  tf: Map<string, number>;
+  length: number;
+  kind: ChunkKind;
+  relPath: string;
+  embedding: number[];
+  // Names after a declaration keyword in the text (`function foo`, `const bar`), for exact-symbol queries
+  definedNames: Set<string>;
+}
+
+interface PreparedIndex {
+  repoPath: string;
+  items: PreparedChunk[];
+  docFreq: Map<string, number>;
+  avgdl: number;
 }
 
 export interface NeuralSearchStatus {
@@ -260,61 +277,54 @@ export class SemanticSearchEngine {
 
   private static cachedPageRank: Map<string, PageRankResult> = new Map();
 
+  /**
+   * PageRank scores, computed at index build time and stored with the index, so a new process does not re-analyse
+   * every file to rank its first search. Incremental refreshes keep the stored scores (one file rarely moves a
+   * repo's centrality); new files get the neutral score until the next full build.
+   */
   public static getCachedPageRank(repoPath: string): PageRankResult {
     const key = path.resolve(repoPath);
-    if (!this.cachedPageRank.has(key)) {
-      this.cachedPageRank.set(key, PageRankCalculator.calculate(repoPath));
+    let result = this.cachedPageRank.get(key);
+    if (!result) {
+      const store = ChunkStores.forRepo(repoPath);
+      const stored = store.readScores();
+      if (stored) {
+        result = { scores: stored, topFiles: [], topSymbols: [] };
+      } else {
+        result = PageRankCalculator.calculate(repoPath);
+        store.writeScores(result.scores);
+      }
+      this.cachedPageRank.set(key, result);
     }
-    return this.cachedPageRank.get(key)!;
-  }
-
-  private static getStorePath(repoPath: string): string {
-    return path.join(repoPath, '.codebase', 'embeddings.json');
+    return result;
   }
 
   private static toRelPath(repoPath: string, filePath: string): string {
+    // Fast path for files inside the repo: called once per file on every freshness check
+    const root = repoPath.endsWith(path.sep) ? repoPath : repoPath + path.sep;
+    if (filePath.startsWith(root) && !filePath.includes('..')) {
+      const rel = filePath.slice(root.length);
+      return path.sep === '/' ? rel : rel.split(path.sep).join('/');
+    }
     return path.relative(repoPath, filePath).replace(/\\/g, '/');
   }
 
   /**
-   * Reads embeddings.json. `unreadable` is set when the file exists but cannot be parsed or decrypted,
-   * so callers never overwrite an encrypted index they merely lack the key for.
+   * Reads the index (SQLite, or the JSON file for encrypted indexes). `unreadable` is set when a store exists but
+   * cannot be read or decrypted, so callers never overwrite an encrypted index they merely lack the key for.
    */
   private static readStore(repoPath: string): { payload: IndexStorePayload | null; unreadable: boolean } {
-    const storePath = this.getStorePath(repoPath);
-    if (!fs.existsSync(storePath)) return { payload: null, unreadable: false };
-
-    try {
-      const parsed = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-      const data = IndexEncryption.isEncrypted(parsed) ? JSON.parse(IndexEncryption.decrypt(parsed, repoPath)) : parsed;
-      return { payload: { chunks: data.chunks || [], meta: data.meta }, unreadable: false };
-    } catch {
-      return { payload: null, unreadable: true };
-    }
+    const { snapshot, unreadable } = ChunkStores.forRepo(repoPath).read();
+    return { payload: snapshot ? { chunks: snapshot.chunks, meta: snapshot.meta } : null, unreadable };
   }
 
   public static loadChunks(repoPath: string): CodeChunk[] {
     return this.readStore(repoPath).payload?.chunks || [];
   }
 
-  public static saveChunks(repoPath: string, chunks: CodeChunk[], encrypt: boolean = false, meta?: IndexMeta): void {
-    const storePath = this.getStorePath(repoPath);
-    const storeDir = path.dirname(storePath);
-    if (!fs.existsSync(storeDir)) {
-      fs.mkdirSync(storeDir, { recursive: true });
-    }
-
-    const payloadStr = JSON.stringify(meta ? { meta, chunks } : { chunks }, null, 2);
-
-    // If encryption is requested or master key is present / environment key set
-    const shouldEncrypt = encrypt || Boolean(process.env.CODEBASE_ENCRYPTION_KEY) || fs.existsSync(path.join(repoPath, '.codebase', '.master.key'));
-
-    if (shouldEncrypt) {
-      const encrypted = IndexEncryption.encrypt(payloadStr, repoPath);
-      fs.writeFileSync(storePath, JSON.stringify(encrypted, null, 2), 'utf8');
-    } else {
-      fs.writeFileSync(storePath, payloadStr, 'utf8');
-    }
+  /** Files holding this repo's index, and their total size. */
+  public static indexStorage(repoPath: string): { kind: 'sqlite' | 'json'; bytes: number } {
+    return { kind: ChunkStores.forRepo(repoPath).kind, bytes: ChunkStores.sizeBytes(repoPath) };
   }
 
   public static buildIndex(repoPath: string, encrypt: boolean = false): void {
@@ -328,27 +338,21 @@ export class SemanticSearchEngine {
       meta.files[this.toRelPath(repoPath, entry.filePath)] = { mtimeMs: entry.mtimeMs, size: entry.size };
     });
 
-    this.saveChunks(repoPath, allChunks, encrypt, meta);
+    const store = ChunkStores.forRepo(repoPath, encrypt);
+    store.replaceAll(allChunks, meta);
+    const pageRank = PageRankCalculator.calculate(repoPath);
+    store.writeScores(pageRank.scores);
+    this.cachedPageRank.set(path.resolve(repoPath), pageRank);
   }
 
   /**
-   * High-Performance Differential Incremental Indexer (<50ms).
-   * Only re-chunks modified files and updates index without full rescan.
-   * Files that no longer exist or are no longer indexable are dropped from the index.
+   * Incremental update: re-chunks only the given files and rewrites only their rows. Files that no longer exist
+   * or are no longer indexable are dropped from the index.
    */
   public static updateFileChunks(repoPath: string, modifiedFiles: string[]): { updatedCount: number; durationMs: number } {
     const start = Date.now();
-    this.cachedPageRank.delete(path.resolve(repoPath));
-    const existing = this.readStore(repoPath).payload;
-    const modSet = new Set(modifiedFiles.map(f => path.resolve(f)));
-
-    // Retain chunks for unmodified files
-    const retained = (existing?.chunks || []).filter(c => !modSet.has(path.resolve(c.filePath)));
-    const meta = existing?.meta;
-
-    // Re-chunk changed files that exist
-    const newChunks: CodeChunk[] = [];
-    modSet.forEach(abs => {
+    let updatedCount = 0;
+    const updates: FileUpdate[] = [...new Set(modifiedFiles.map(f => path.resolve(f)))].map(abs => {
       const rel = this.toRelPath(repoPath, abs);
       let stats: fs.Stats | null = null;
       try {
@@ -356,23 +360,13 @@ export class SemanticSearchEngine {
       } catch {
         stats = null;
       }
-      if (stats) {
-        newChunks.push(...this.chunkFile(abs, repoPath));
-        if (meta) meta.files[rel] = { mtimeMs: stats.mtimeMs, size: stats.size };
-      } else if (meta) {
-        delete meta.files[rel];
-      }
+      if (!stats) return { rel, chunks: null };
+      const chunks = this.chunkFile(abs, repoPath);
+      updatedCount += chunks.length;
+      return { rel, chunks, stat: { mtimeMs: stats.mtimeMs, size: stats.size } };
     });
-
-    if (meta) meta.refreshedAt = new Date().toISOString();
-    const combined = [...retained, ...newChunks];
-    this.saveChunks(repoPath, combined, false, meta);
-    const durationMs = Date.now() - start;
-
-    return {
-      updatedCount: newChunks.length,
-      durationMs
-    };
+    ChunkStores.forRepo(repoPath).updateFiles(updates, new Date().toISOString());
+    return { updatedCount, durationMs: Date.now() - start };
   }
 
   /**
@@ -512,6 +506,52 @@ export class SemanticSearchEngine {
     return { results, index, neural: { model, embedded: neural.embedded } };
   }
 
+  // Per-chunk data that does not depend on the query, computed once per chunk object (unchanged chunks are the
+  // same objects across refreshes), and per-index document frequencies, computed once per chunk list
+  private static preparedChunks = new WeakMap<CodeChunk, PreparedChunk>();
+  private static preparedIndexes = new WeakMap<CodeChunk[], PreparedIndex>();
+
+  private static prepare(repoPath: string, chunks: CodeChunk[]): PreparedIndex {
+    const cached = this.preparedIndexes.get(chunks);
+    if (cached && cached.repoPath === repoPath) return cached;
+    let totalLen = 0;
+    const docFreq = new Map<string, number>();
+    const items = chunks.map(chunk => {
+      let item = this.preparedChunks.get(chunk);
+      if (!item) {
+        const tokens = chunk.tokens || this.tokenize(chunk.content);
+        const tf = new Map<string, number>();
+        tokens.forEach(t => tf.set(t, (tf.get(t) || 0) + 1));
+        item = {
+          tf,
+          length: tokens.length,
+          kind: this.classifyKind(chunk.filePath, repoPath),
+          relPath: path.relative(repoPath, chunk.filePath).replace(/\\/g, '/'),
+          embedding: chunk.embedding ?? DenseVectorEngine.embedText(chunk.content),
+          definedNames: this.definedNames(chunk.content)
+        };
+        this.preparedChunks.set(chunk, item);
+      }
+      totalLen += item.length;
+      item.tf.forEach((_, t) => docFreq.set(t, (docFreq.get(t) || 0) + 1));
+      return item;
+    });
+    const prepared = { repoPath, items, docFreq, avgdl: totalLen / (chunks.length || 1) };
+    this.preparedIndexes.set(chunks, prepared);
+    return prepared;
+  }
+
+  // `function foo$bar` defines foo$bar, and (as `\b` sees `$` as a boundary) also matches a query for foo
+  private static definedNames(content: string): Set<string> {
+    const names = new Set<string>();
+    for (const m of content.matchAll(/(?:function|class|interface|type|const|let|var|def|fn)\s+([A-Za-z0-9_$]+)/g)) {
+      const parts = m[1].split('$');
+      names.add(m[1]);
+      for (let i = 1; i < parts.length; i++) names.add(parts.slice(0, i).join('$'));
+    }
+    return names;
+  }
+
   private static rankChunks(repoPath: string, chunks: CodeChunk[], query: string, topK: number): SearchResult[] {
     const queryTokens = this.tokenizeQuery(query);
     if (queryTokens.length === 0 || chunks.length === 0) return [];
@@ -525,105 +565,78 @@ export class SemanticSearchEngine {
     const exactSymbols = contentSymbols.length > 0 ? contentSymbols : symbolCandidates;
 
     const N = chunks.length;
-    let totalLen = 0;
-    const docFreq: Record<string, number> = {};
-    const docLengths: number[] = [];
-
-    chunks.forEach((chunk, i) => {
-      const tokens = chunk.tokens || this.tokenize(chunk.content);
-      docLengths[i] = tokens.length;
-      totalLen += tokens.length;
-
-      const uniqueTokens = new Set(tokens);
-      uniqueTokens.forEach(t => {
-        docFreq[t] = (docFreq[t] || 0) + 1;
-      });
-    });
-
-    const avgdl = totalLen / (N || 1);
+    const { items, docFreq, avgdl } = this.prepare(repoPath, chunks);
     const k1 = 1.2;
     const b = 0.75;
+    const idf = queryTokens.map(qTerm => {
+      const n = docFreq.get(qTerm) || 0;
+      return n > 0 ? Math.log((N - n + 0.5) / (n + 0.5) + 1) : 0;
+    });
+    // Graph Centrality / PageRank Weight (Aider repomap style)
+    const pageRankResult = this.getCachedPageRank(repoPath);
 
-    const results: SearchResult[] = chunks.map((chunk, i) => {
-      const tokens = chunk.tokens || this.tokenize(chunk.content);
-      const docLen = docLengths[i];
-
-      const tf: Record<string, number> = {};
-      tokens.forEach(t => { tf[t] = (tf[t] || 0) + 1; });
+    const results: SearchResult[] = [];
+    chunks.forEach((chunk, i) => {
+      const item = items[i];
 
       let bm25Score = 0;
-      queryTokens.forEach(qTerm => {
-        const n = docFreq[qTerm] || 0;
-        if (n > 0) {
-          const idf = Math.log((N - n + 0.5) / (n + 0.5) + 1);
-          const termCount = tf[qTerm] || 0;
-          const numerator = termCount * (k1 + 1);
-          const denominator = termCount + k1 * (1 - b + b * (docLen / (avgdl || 1)));
-          bm25Score += idf * (numerator / denominator);
-        }
+      queryTokens.forEach((qTerm, q) => {
+        if (idf[q] === 0) return;
+        const termCount = item.tf.get(qTerm) || 0;
+        const numerator = termCount * (k1 + 1);
+        const denominator = termCount + k1 * (1 - b + b * (item.length / (avgdl || 1)));
+        bm25Score += idf[q] * (numerator / denominator);
       });
 
-      // Hybrid AST Symbol Matching
+      // Hybrid AST Symbol Matching: an AST definition, else a definition found in the text
       let symbolBoost = 0;
       let matchedSymbol: string | undefined;
-
-      if (exactSymbols.length > 0) {
-        for (const sym of exactSymbols) {
-          // Check if chunk explicitly defines this symbol
-          if (chunk.symbols && chunk.symbols.includes(sym)) {
-            symbolBoost += 5.0; // AST definition match boost
-            matchedSymbol = sym;
-            break;
-          }
-          // Exact regex match for definition in content
-          const defRegex = new RegExp(`(?:function|class|interface|type|const|let|var|def|fn)\\s+${sym}\\b`);
-          if (defRegex.test(chunk.content)) {
-            symbolBoost += 6.0;
-            matchedSymbol = sym;
-            break;
-          }
+      for (let s = 0; s < exactSymbols.length; s++) {
+        const sym = exactSymbols[s];
+        if (chunk.symbols && chunk.symbols.includes(sym)) {
+          symbolBoost += 5.0;
+          matchedSymbol = sym;
+          break;
+        }
+        if (item.definedNames.has(sym)) {
+          symbolBoost += 6.0;
+          matchedSymbol = sym;
+          break;
         }
       }
 
       // Dense Vector Cosine Similarity
-      const denseSim = chunk.embedding
-        ? DenseVectorEngine.cosineSimilarity(queryEmbedding, chunk.embedding)
-        : DenseVectorEngine.cosineSimilarity(queryEmbedding, DenseVectorEngine.embedText(chunk.content));
-      const denseSimilarity = Number(denseSim.toFixed(3));
+      const denseSim = DenseVectorEngine.cosineSimilarity(queryEmbedding, item.embedding);
       const vectorBoost = denseSim > 0.35 ? denseSim * 3.0 : 0;
 
-      // Graph Centrality / PageRank Weight (Aider repomap style)
-      const pageRankResult = this.getCachedPageRank(repoPath);
-      const relPath = path.relative(repoPath, chunk.filePath).replace(/\\/g, '/');
-      const prScore = pageRankResult.scores.get(relPath) || (1.0 / (N || 1));
-      const pageRankScore = Number((prScore * (N || 1)).toFixed(3));
-      
-      // Boost central system hubs if there is a keyword, dense vector, or symbol hit
+      // Boost central system hubs only if there is a keyword, dense vector, or symbol hit
       const hasRelevance = bm25Score > 0 || symbolBoost > 0 || vectorBoost > 0;
-      const prBoost = hasRelevance ? Math.min(pageRankScore * 0.75, 2.5) : 0;
+      if (!hasRelevance) return;
+      const prScore = pageRankResult.scores.get(item.relPath) || (1.0 / (N || 1));
+      const pageRankScore = Number((prScore * (N || 1)).toFixed(3));
+      const prBoost = Math.min(pageRankScore * 0.75, 2.5);
 
-      const kind = this.classifyKind(chunk.filePath, repoPath);
-      const totalScore = (bm25Score + symbolBoost + vectorBoost + prBoost) * KIND_SCORE_WEIGHT[kind];
-      const matchType: SearchResult['matchType'] = symbolBoost > 0 
+      const totalScore = (bm25Score + symbolBoost + vectorBoost + prBoost) * KIND_SCORE_WEIGHT[item.kind];
+      if (totalScore <= 0) return;
+      const matchType: SearchResult['matchType'] = symbolBoost > 0
         ? (bm25Score > 0 || vectorBoost > 0 ? 'hybrid' : 'ast-symbol')
         : (vectorBoost > 0 && bm25Score > 0 ? 'hybrid' : 'semantic-bm25');
 
-      return {
+      results.push({
         filePath: chunk.filePath,
         startLine: chunk.startLine,
         endLine: chunk.endLine,
         snippet: chunk.content,
         score: totalScore,
-        kind,
+        kind: item.kind,
         matchType,
         matchedSymbol,
         pageRankScore,
-        denseSimilarity
-      };
+        denseSimilarity: Number(denseSim.toFixed(3))
+      });
     });
 
     return results
-      .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
   }

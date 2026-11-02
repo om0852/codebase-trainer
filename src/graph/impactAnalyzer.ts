@@ -64,10 +64,10 @@ export class ImpactAnalyzer {
 
     // 3. Scan for Route / Symbol Usage References across codebase
     facts.forEach(fact => {
-      const content = ASTExtractor.readSourceFile(fact.filePath);
+      const content = ASTExtractor.readSourceFileLower(fact.filePath);
       if (content === null) return;
 
-      if (content.toLowerCase().includes(targetSymbolName)) {
+      if (content.includes(targetSymbolName)) {
         const relPath = path.relative(repoPath, fact.filePath).replace(/\\/g, '/');
         if (!directDependents.has(relPath) && !targetFiles.has(fact.filePath) && relPath.toLowerCase() !== targetNormalized) {
           affectedRoutes.add(relPath);

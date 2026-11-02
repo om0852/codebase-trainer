@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASTExtractor } from '../extractors/astExtractor.js';
+import { ASTFact } from '../types/index.js';
 import { extractCodeFacts } from '../parsing/codeFacts.js';
 import { TreeSitter } from '../parsing/treeSitter.js';
 
@@ -44,12 +45,28 @@ export interface DriftReport {
   healthStatus: 'HEALTHY' | 'DRIFT_DETECTED' | 'CRITICAL_MISMATCH';
 }
 
+// Routes and client calls depend only on the files, so they are computed once per scanDirectory result (the same
+// array until a file changes); callers get copies of the lists
+const clientCallCache = new WeakMap<ASTFact[], { repoPath: string; value: ClientCall[] }>();
+const endpointCache = new WeakMap<ASTFact[], { repoPath: string; value: ServerEndpoint[] }>();
+function memoize<T>(cache: WeakMap<ASTFact[], { repoPath: string; value: T }>, facts: ASTFact[], repoPath: string, compute: () => T): T {
+  const hit = cache.get(facts);
+  if (hit && hit.repoPath === repoPath) return hit.value;
+  const value = compute();
+  cache.set(facts, { repoPath, value });
+  return value;
+}
+
 export class ContractDriftDetector {
   /**
    * Scans codebase for frontend fetch/axios calls and extracts endpoints, methods, and payload shapes.
    */
   public static extractClientCalls(repoPath: string): ClientCall[] {
     const facts = ASTExtractor.scanDirectory(repoPath);
+    return [...memoize(clientCallCache, facts, repoPath, () => this.computeClientCalls(repoPath, facts))];
+  }
+
+  private static computeClientCalls(repoPath: string, facts: ASTFact[]): ClientCall[] {
     const calls: ClientCall[] = [];
 
     facts.forEach(fact => {
@@ -189,6 +206,10 @@ export class ContractDriftDetector {
    */
   public static extractServerEndpoints(repoPath: string): ServerEndpoint[] {
     const facts = ASTExtractor.scanDirectory(repoPath);
+    return [...memoize(endpointCache, facts, repoPath, () => this.computeServerEndpoints(repoPath, facts))];
+  }
+
+  private static computeServerEndpoints(repoPath: string, facts: ASTFact[]): ServerEndpoint[] {
     const endpoints: ServerEndpoint[] = [];
     // NestJS `app.setGlobalPrefix('api')` applies to every decorator route
     let globalPrefix = '';

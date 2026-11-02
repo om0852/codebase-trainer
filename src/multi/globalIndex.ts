@@ -56,15 +56,7 @@ export class GlobalIndexManager {
       combinedConventions[repoName] = conventions.rules;
 
       // Collect chunks for global index
-      const embeddingsPath = path.join(repoPath, '.codebase', 'embeddings.json');
-      if (fs.existsSync(embeddingsPath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(embeddingsPath, 'utf8'));
-          if (data.chunks) {
-            allCombinedChunks.push(...data.chunks);
-          }
-        } catch {}
-      }
+      allCombinedChunks.push(...SemanticSearchEngine.loadChunks(repoPath));
 
       console.log(`   - ✅ Scanned ${facts.length} files.`);
     });

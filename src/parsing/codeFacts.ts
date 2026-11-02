@@ -74,7 +74,9 @@ export interface CodeFacts {
   hasSyntaxErrors: boolean;
 }
 
-const MAX_CACHE = 5000;
+// Enough for the whole of a 50k-file repo: analyses walk every file in turn, so a smaller cache would evict each
+// entry before it is used again and re-parse everything on every pass
+const MAX_CACHE = 60000;
 const cache = new Map<string, { content: string; facts: CodeFacts | null }>();
 
 const JS_FUNCTION_TYPES = new Set(['function_declaration', 'generator_function_declaration', 'method_definition', 'arrow_function', 'function_expression', 'function', 'generator_function']);
@@ -87,7 +89,12 @@ const VALUE_POSITION_PARENTS = new Set(['arguments', 'array', 'pair', 'jsx_expre
  */
 export function extractCodeFacts(filePath: string, content: string): CodeFacts | null {
   const cached = cache.get(filePath);
-  if (cached && cached.content === content) return cached.facts;
+  if (cached && cached.content === content) {
+    // Least recently used goes first: move a hit to the end
+    cache.delete(filePath);
+    cache.set(filePath, cached);
+    return cached.facts;
+  }
 
   const grammar = TreeSitter.grammarFor(filePath);
   const tree = grammar ? TreeSitter.parse(filePath, content) : null;

@@ -21,6 +21,7 @@
     "bench:links": "tsx bench/links.ts",
     "bench:permissions": "tsx bench/permissions.ts",
     "bench:test-impact": "tsx bench/test-impact.ts",
+    "bench:scale": "tsx bench/scale.ts",
     "security": "node dist/cli/index.js security",
     "audit": "node dist/cli/index.js audit",
     "ci": "node dist/cli/index.js ci",

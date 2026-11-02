@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { SemanticSearchEngine, KIND_SCORE_WEIGHT } from '../src/semantic/searchEngine.js';
 import { DenseVectorEngine } from '../src/semantic/denseVectorEngine.js';
+import { ChunkStores } from '../src/storage/chunkStore.js';
 import { TextNormalizer } from '../src/semantic/textNormalizer.js';
 import { ASTExtractor } from '../src/extractors/astExtractor.js';
 import { repoPath, relPosix, withFixture, withRepoLock, writeFile } from './helpers.js';
@@ -140,10 +141,9 @@ test('stemmed search, nested checkouts excluded, old-tokenizer index rebuilt', a
     assert.strictEqual(ranked[0], 'src/importResolver.ts', `Stemmed query should find the resolver first, got ${ranked.join(', ')}`);
 
     // An index written by the previous tokenizer is rebuilt rather than matched against stemmed queries
-    const storePath = path.join(root, '.codebase', 'embeddings.json');
-    const stored = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-    stored.meta.tokenizer = 1;
-    fs.writeFileSync(storePath, JSON.stringify(stored), 'utf8');
+    const store = ChunkStores.forRepo(root);
+    const stored = store.read().snapshot!;
+    store.replaceAll(stored.chunks, { ...stored.meta!, tokenizer: 1 });
     assert.strictEqual(SemanticSearchEngine.ensureFreshIndex(root).fullRebuild, true);
     assert.strictEqual(SemanticSearchEngine.ensureFreshIndex(root).fullRebuild, false);
   }, 'cb-trainer-stem-');

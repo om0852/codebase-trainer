@@ -245,7 +245,8 @@ export class DiffChecker {
       .filter(c => c.wholeFile || c.removed.size > 0);
     if (candidates.length === 0) return [];
 
-    const facts = ASTExtractor.scanDirectory(repoPath);
+    // A copy: scanDirectory's array is shared with other callers until a file changes
+    const facts = [...ASTExtractor.scanDirectory(repoPath)];
     // Deleted or renamed-away files are no longer on disk; add them so imports of the old path still resolve
     const known = new Set(facts.map(f => path.resolve(f.filePath)));
     candidates.forEach(c => {

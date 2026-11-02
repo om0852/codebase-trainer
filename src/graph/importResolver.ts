@@ -23,10 +23,16 @@ const JS_TO_TS_EXTENSIONS: Record<string, string[]> = {
  * Supports relative paths, ESM `.js` -> `.ts` mapping, index files, tsconfig/jsconfig `baseUrl` + `paths`
  * aliases, Python relative/absolute modules, and Java/Rust module paths. External packages resolve to null.
  */
+// Callers treat graphs as read-only, so a graph is shared by everyone holding the same facts array
+const graphCache = new WeakMap<ASTFact[], { repoPath: string; graph: Record<string, string[]> }>();
+const resolverCache = new WeakMap<ASTFact[], ImportResolver>();
+const invertedCache = new WeakMap<Record<string, string[]>, Record<string, string[]>>();
+
 export class ImportResolver {
   private readonly repoPath: string;
   // Normalized absolute path -> original ASTFact.filePath
   private readonly fileIndex = new Map<string, string>();
+  private readonly resolved = new Map<string, string | null>();
   private readonly aliasConfigCache = new Map<string, PathAliasConfig | null>();
 
   private constructor(repoPath: string, facts: ASTFact[]) {
@@ -93,13 +99,21 @@ export class ImportResolver {
   }
 
   public static forFacts(repoPath: string, facts: ASTFact[]): ImportResolver {
-    return new ImportResolver(repoPath, facts);
+    // One resolver per facts array (scanDirectory returns the same array until a file changes), keeping its caches
+    const cached = resolverCache.get(facts);
+    if (cached && cached.repoPath === path.resolve(repoPath)) return cached;
+    const resolver = new ImportResolver(repoPath, facts);
+    resolverCache.set(facts, resolver);
+    return resolver;
   }
 
   /**
    * Builds the resolved import graph: importing file -> imported files (both as ASTFact.filePath).
    */
   public static buildImportGraph(repoPath: string, facts: ASTFact[]): Record<string, string[]> {
+    // scanDirectory returns the same array while no file changed, so the graph is built once per change
+    const cached = graphCache.get(facts);
+    if (cached && cached.repoPath === repoPath) return cached.graph;
     const resolver = new ImportResolver(repoPath, facts);
     const graph: Record<string, string[]> = {};
     facts.forEach(f => {
@@ -110,6 +124,7 @@ export class ImportResolver {
       });
       graph[f.filePath] = Array.from(targets);
     });
+    graphCache.set(facts, { repoPath, graph });
     return graph;
   }
 
@@ -117,6 +132,8 @@ export class ImportResolver {
    * Inverts an import graph: imported file -> files that import it.
    */
   public static invertGraph(graph: Record<string, string[]>): Record<string, string[]> {
+    const cached = invertedCache.get(graph);
+    if (cached) return cached;
     const inverted: Record<string, string[]> = {};
     Object.keys(graph).forEach(f => { inverted[f] = []; });
     Object.entries(graph).forEach(([from, targets]) => {
@@ -124,6 +141,7 @@ export class ImportResolver {
         (inverted[t] = inverted[t] || []).push(from);
       });
     });
+    invertedCache.set(graph, inverted);
     return inverted;
   }
 
@@ -141,6 +159,15 @@ export class ImportResolver {
 
   public resolve(fromFile: string, specifier: string, language?: string): string | null {
     const lang = language || this.languageOf(fromFile);
+    // Resolution depends on the importing directory, not the file: memoize per directory and specifier
+    const key = `${lang}|${path.dirname(fromFile)}|${specifier}`;
+    if (this.resolved.has(key)) return this.resolved.get(key)!;
+    const target = this.resolveUncached(fromFile, specifier, lang);
+    this.resolved.set(key, target);
+    return target;
+  }
+
+  private resolveUncached(fromFile: string, specifier: string, lang: string): string | null {
     if (lang === 'python') return this.resolvePython(fromFile, specifier);
     if (lang === 'java') return this.resolveBySegments(specifier.split('.'), ['.java']);
     if (lang === 'rust') return this.resolveRust(specifier);

@@ -234,7 +234,7 @@ async function benchRepo(repo: CorpusRepo, split: string): Promise<RepoReport | 
   const buildStart = performance.now();
   SemanticSearchEngine.buildIndex(root);
   const buildMs = Math.round(performance.now() - buildStart);
-  const bytes = fs.statSync(path.join(root, '.codebase', 'embeddings.json')).size;
+  const bytes = SemanticSearchEngine.indexStorage(root).bytes;
   if (args.embeddings) {
     // Embed every chunk once up front, so per-question latency is the query, not the first-time vector build
     const embedStart = performance.now();

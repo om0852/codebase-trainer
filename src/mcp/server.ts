@@ -14,6 +14,10 @@ import { RouteRegistryManager } from '../microservices/routeRegistry.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { PermissionMapBuilder } from '../security/permissionMap.js';
 import { TOOLS, callTool } from './tools.js';
+import { RepoWatch } from '../watcher/repoWatch.js';
+import { SemanticSearchEngine } from '../semantic/searchEngine.js';
+import { ASTExtractor } from '../extractors/astExtractor.js';
+import { CallSiteExtractor } from '../flow/callSites.js';
 
 export async function runMCPServer(initialRepoPath: string = process.cwd()) {
   function resolveRepoPath(customPath?: string): string {
@@ -22,6 +26,9 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
     if (fs.existsSync(path.join(process.cwd(), '.codebase'))) return path.resolve(process.cwd());
     return path.resolve(initialRepoPath || process.cwd());
   }
+
+  // The server is long-lived: track file changes so tool calls patch the file listing instead of re-walking the repo
+  RepoWatch.start(resolveRepoPath());
 
   const server = new Server(
     {
@@ -181,4 +188,16 @@ export async function runMCPServer(initialRepoPath: string = process.cwd()) {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // Once the client has finished the handshake, do the one-time work (index, parse, call edges) in the background
+  // so the agent's first tool call does not pay for it; on a 10k-file repo that is several seconds
+  setTimeout(() => {
+    const repoPath = resolveRepoPath();
+    try {
+      SemanticSearchEngine.search(repoPath, 'warm up', 1);
+      CallSiteExtractor.extractEdges(repoPath, ASTExtractor.scanDirectory(repoPath));
+    } catch (err) {
+      console.error(`[codebase-trainer] Warm-up skipped: ${(err as Error).message}`);
+    }
+  }, 1500).unref();
 }

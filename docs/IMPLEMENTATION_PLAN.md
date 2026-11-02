@@ -103,7 +103,7 @@ If the target repo has `typescript` installed, use the compiler API (`ts.createP
 
 ## 5. Phase 2 — Storage and a long-running server (weeks 4–6)
 
-Today: a JSON index re-read on every query (7 MB for ~50 files, which extrapolates to over a gigabyte at 10k files) and several full re-scans per tool call.
+Before Phase 2: a JSON index re-read on every query and several full re-scans per tool call.
 
 ### Design
 
@@ -115,6 +115,39 @@ Today: a JSON index re-read on every query (7 MB for ~50 files, which extrapolat
 - **Monorepos:** detect workspaces (`package.json` workspaces, pnpm, Nx, Turborepo); module names resolve across packages (`@acme/ui` → `packages/ui/src`).
 
 **Done when:** 10k-file synthetic repo meets the §1 latency and index-time budgets; index size under 100 MB; no tool performs a full re-scan while the server is running.
+
+**Status (done for 10k files):** measured with `npm run bench:scale` (`bench/scale.ts`). It generates a deterministic Next.js + Prisma repo of 10,000 files and times each tool warm in one process with the watcher on, as the server runs.
+
+| 10,000 files | Before Phase 2 | After | Budget |
+|---|---|---|---|
+| Index build | 13.4 s | 13.5 s | < 60 s |
+| Index size | 40.9 MB | 23.8 MB | < 100 MB |
+| Search, warm p50 / p95 | 2,089 / 2,656 ms | **43 / 50 ms** | p95 < 150 ms |
+| Search after editing one file | 30.9 s | **38 ms** | |
+| `feature_slice`, warm p50 | 16.7 s | **88 ms** | |
+| `impact`, warm p50 | 25.7 s | **312 ms** | |
+| `cb-trainer search` in a new process | about 30 s | **3.2 s** | |
+
+What changed:
+
+- **SQLite store** (`src/storage/chunkStore.ts`, built-in `node:sqlite`, no new dependency).
+  - It has `meta`, `files`, `chunks` (embedding as a float32 blob, paths relative to the repo) and `pagerank` tables.
+  - A refresh rewrites only the changed files' rows. A process keeps the index in memory and patches it on its own writes; a generation counter picks up other processes' writes.
+  - A connection is opened per operation, because an open handle locks the file on Windows.
+  - The JSON store remains for encrypted indexes and for Node versions without `node:sqlite`.
+  - PageRank scores are computed at build time and stored, so a new process no longer re-analyses every file before its first search.
+- **No re-scans in the server.**
+  - `RepoWatch` records changed paths, and the file listing patches them instead of walking the tree. It falls back to a full walk when ignore rules or directories change, after more than 500 changes, and at least every 10 minutes.
+  - File contents and per-file facts are cached by mtime and size.
+  - `scanDirectory` returns the same array while nothing changed, and the import graph, resolver, call edges, routes and client calls are memoized on it.
+  - The parse cache was a 5,000-entry first-in-first-out cache, so any pass over more files missed on every entry and re-parsed everything. It is now least-recently-used and covers 60,000 files.
+  - The server warms the index and call edges in the background after the handshake.
+- **Search.** Term frequencies, document frequencies, kinds and defined names are precomputed per chunk instead of per query. Results on the 104-question benchmark are unchanged (MRR 0.71, hit@5 84%).
+
+Not done:
+- 50k files measured only by extrapolation.
+- No nightly CI job for the scale benchmark.
+- Facts are not persisted between processes: a one-shot CLI command on a 10k repo that needs call edges still parses every file, taking about 13 s the first time.
 
 ---
 

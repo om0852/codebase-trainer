@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ASTFact } from '../types/index.js';
 import { ImportResolver } from '../graph/importResolver.js';
+import { ASTExtractor } from '../extractors/astExtractor.js';
 import { ContractDriftDetector } from '../microservices/contractDrift.js';
 import { CodeFacts, extractCodeFacts } from '../parsing/codeFacts.js';
 import { adapterEdges, buildRepoIndex } from './adapters.js';
@@ -40,21 +41,23 @@ const NOT_FUNCTION_NAMES = new Set(['if', 'for', 'while', 'switch', 'catch', 'fu
  * uses become `reference` edges, and client fetch/axios calls are linked to matching route handlers as
  * `http` edges. Each edge carries the file, line and enclosing function it was read from.
  */
+const edgeCache = new WeakMap<ASTFact[], { repoPath: string; edges: FlowEdge[] }>();
+
 export class CallSiteExtractor {
   public static extractEdges(repoPath: string, facts: ASTFact[]): FlowEdge[] {
+    // Edges depend only on the files: computed once per scanDirectory result (the same array until a file changes)
+    const cached = edgeCache.get(facts);
+    if (cached && cached.repoPath === repoPath) return [...cached.edges];
+    const edges = this.computeEdges(repoPath, facts);
+    edgeCache.set(facts, { repoPath, edges });
+    return [...edges];
+  }
+
+  private static computeEdges(repoPath: string, facts: ASTFact[]): FlowEdge[] {
     const resolver = ImportResolver.forFacts(repoPath, facts);
     const toRel = (f: string) => path.relative(repoPath, f).replace(/\\/g, '/');
-    const contentCache = new Map<string, string>();
-    const read = (file: string): string => {
-      if (!contentCache.has(file)) {
-        try {
-          contentCache.set(file, fs.readFileSync(file, 'utf8'));
-        } catch {
-          contentCache.set(file, '');
-        }
-      }
-      return contentCache.get(file)!;
-    };
+    // The shared content cache: the same string objects let the parse cache match without re-reading files
+    const read = (file: string): string => ASTExtractor.readSourceFile(file) ?? '';
 
     const edges: FlowEdge[] = [];
     const repoIndex = buildRepoIndex(repoPath, facts, read);

@@ -184,6 +184,8 @@ Before every search, files on disk are compared with the stats recorded when the
 
 Set `CODEBASE_TRAINER_AUTO_REFRESH=0` to skip re-indexing; changed files are then listed under `staleFiles` and their results carry `"stale": true`.
 
+The index is a SQLite database in `.codebase/index.sqlite` (Node's built-in `node:sqlite`; encrypted indexes use an encrypted JSON file instead). Only changed files are re-indexed. While the MCP server runs, it watches the repo, so tool calls do not re-scan it. On a generated 10,000-file repo, warm searches take 43 ms at p50 and 50 ms at p95, and a search right after editing a file takes 38 ms (`npm run bench:scale`).
+
 The index covers files not excluded by the repo-root `.gitignore`, `.codebaseignore`, or the built-in list of dependency and build directories (`node_modules`, `dist`, `build`, `.next`, `vendor`, `target`, virtualenvs, caches).
 
 ---
